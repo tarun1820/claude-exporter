@@ -607,7 +607,13 @@ function inferModel(conversation) {
   return DEFAULT_MODEL_TIMELINE[0].model;
 }
 
-// Format a model ID like `claude-sonnet-4-5-20250929` into "Claude Sonnet 4.5"
+// Format a model ID like `claude-sonnet-4-5-20250929` into "Claude Sonnet 4.5".
+// Schema reference: https://platform.claude.com/docs/en/about-claude/models/model-ids-and-versions
+// Handles three documented shapes for the sonnet/opus/haiku families:
+//   - Dateless 4.6+:        claude-{name}-{major}-{minor}            (canonical snapshot)
+//   - Dated pre-4.6:        claude-{name}-{major}-{minor}-{YYYYMMDD}
+//   - Convenience alias:    claude-{name}-{major}-{minor}            (resolves to most recent dated snapshot)
+// Unknown families (anything not in `(sonnet|opus|haiku)`) fall through to raw display.
 function formatModelName(model) {
   if (!model || !model.startsWith('claude-')) {
     return model || 'Unknown';

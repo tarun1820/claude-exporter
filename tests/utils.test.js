@@ -316,6 +316,63 @@ describe('formatModelName — edge cases', () => {
   });
 });
 
+// Coverage matrix for the three documented shapes (per Anthropic's model-ids docs):
+//   1. Dateless 4.6+: `claude-{name}-{major}-{minor}` (canonical snapshot)
+//   2. Dated pre-4.6: `claude-{name}-{major}-{minor}-{YYYYMMDD}`
+//   3. Convenience alias pre-4.6: `claude-{name}-{major}-{minor}` (looks identical to #1, semantic difference only)
+// Verified across all known families. Bedrock/Vertex prefixes intentionally omitted —
+// claude.ai never serves those.
+describe('formatModelName — full family × shape matrix', () => {
+  const families = [
+    ['sonnet', 'Sonnet'],
+    ['opus', 'Opus'],
+    ['haiku', 'Haiku'],
+  ];
+
+  for (const [family, label] of families) {
+    it(`renders ${family} dateless (4.6+ canonical)`, () => {
+      expect(formatModelName(`claude-${family}-4-6`)).toBe(`Claude ${label} 4.6`);
+    });
+
+    it(`renders ${family} dated (pre-4.6)`, () => {
+      expect(formatModelName(`claude-${family}-4-5-20250929`)).toBe(`Claude ${label} 4.5`);
+    });
+
+    it(`renders ${family} alias (pre-4.6 dateless — same shape as #1, different semantics)`, () => {
+      expect(formatModelName(`claude-${family}-4-5`)).toBe(`Claude ${label} 4.5`);
+    });
+  }
+});
+
+describe('formatModelName — minor-version regex boundary (\\d{1,2})', () => {
+  it('accepts two-digit minors', () => {
+    expect(formatModelName('claude-sonnet-5-10')).toBe('Claude Sonnet 5.10');
+    expect(formatModelName('claude-opus-4-99')).toBe('Claude Opus 4.99');
+  });
+
+  it('falls through on three-digit minors (would need regex bump)', () => {
+    expect(formatModelName('claude-sonnet-5-100')).toBe('claude-sonnet-5-100');
+  });
+});
+
+// Documented behavior for unknown families (e.g. a hypothetical future "Mythos").
+// Current regex hardcodes `(sonnet|opus|haiku)` — anything else falls through to
+// raw display. These tests pin that behavior so the day Anthropic ships a new
+// family, we get a heads-up via test failure rather than ugly UI.
+describe('formatModelName — unknown family fallthrough', () => {
+  it('returns raw ID for new family with non-numeric version (e.g. -preview)', () => {
+    expect(formatModelName('claude-mythos-preview')).toBe('claude-mythos-preview');
+  });
+
+  it('returns raw ID for new family with numeric version', () => {
+    expect(formatModelName('claude-mythos-1-0')).toBe('claude-mythos-1-0');
+  });
+
+  it('returns raw ID for new family with dated version', () => {
+    expect(formatModelName('claude-mythos-1-0-20260101')).toBe('claude-mythos-1-0-20260101');
+  });
+});
+
 describe('inferModel', () => {
   it('returns conversation.model when set, regardless of date', () => {
     expect(inferModel({ model: 'claude-opus-4-7', created_at: '2024-01-01T00:00:00Z' }))
@@ -362,6 +419,15 @@ describe('DEFAULT_MODEL_TIMELINE', () => {
         .toBeGreaterThan(DEFAULT_MODEL_TIMELINE[i - 1].date.getTime());
     }
   });
+
+  // Catches typos when adding a new default — e.g. `claude-sonnett-4-7` would
+  // silently fall through to raw display in the UI; this test makes it loud.
+  it('every entry parses cleanly through formatModelName (no fallthrough to raw ID)', () => {
+    for (const entry of DEFAULT_MODEL_TIMELINE) {
+      const formatted = formatModelName(entry.model);
+      expect(formatted, `entry "${entry.model}" failed to format`).toMatch(/^Claude (Sonnet|Opus|Haiku) /);
+    }
+  });
 });
 
 describe('getModelBadgeClass', () => {
@@ -373,6 +439,11 @@ describe('getModelBadgeClass', () => {
 
   it('returns empty string for unknown family', () => {
     expect(getModelBadgeClass('gpt-4')).toBe('');
+  });
+
+  it('returns empty string for new claude family without a registered badge', () => {
+    expect(getModelBadgeClass('claude-mythos-preview')).toBe('');
+    expect(getModelBadgeClass('claude-mythos-1-0')).toBe('');
   });
 
   it('handles null/empty input without throwing', () => {
