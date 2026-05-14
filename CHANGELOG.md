@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.9.3]
+
+- Snapshot each conversation's current model to `chrome.storage.local` whenever the conversation list is fetched (browse page load or popup "Export All") — preserves the model before a chat gets bounced to a new one on model retirement
+- Records first-seen model, current model, and a change history per conversation; only the raw API model is stored, never an inferred guess
+
 ## [1.9.2]
 
 - Added Vitest test harness for `utils.js` (52 tests covering export logic, model name parsing, artifact extraction)
