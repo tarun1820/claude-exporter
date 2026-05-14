@@ -118,11 +118,15 @@
   - Click the org ID row in the browse settings dropdown to copy it
   - Toast confirms "Org ID copied to clipboard"
 
-- **Vitest unit tests for `utils.js`** (post-v1.9.1)
-  - 17 starter tests covering the recently-fixed bugs and core export logic
+- **Vitest unit tests for `utils.js`** (v1.9.2)
+  - 52 tests covering core export logic, model name parsing, and the recently-fixed bugs
   - Regression coverage for `tool_use.name === 'artifacts'` filter, branch traversal, file extension mapping
   - `npm test` from `src/`; tests live in `src/tests/`
   - Canonical source is `chrome/utils.js`; `firefox/utils.js` mirror must stay in sync
+
+- **Extract model utilities to `utils.js`** (v1.9.2)
+  - Moved `formatModelName`, `getModelBadgeClass`, `DEFAULT_MODEL_TIMELINE` out of `content.js`/`browse.js` into shared `utils.js`
+  - Doc-linked the Anthropic model-ID schema in code comments
 
 ## Pending 🔄
 

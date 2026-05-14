@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.9.2]
+
+- Added Vitest test harness for `utils.js` (52 tests covering export logic, model name parsing, artifact extraction)
+- Extracted model utilities (`formatModelName`, `getModelBadgeClass`, `DEFAULT_MODEL_TIMELINE`) out of `content.js`/`browse.js` into shared `utils.js`
+- Doc-linked the Anthropic model-ID schema in code comments
+
 ## [1.9.1]
 
 - Fixed Model column header alignment with badge text on browse page
