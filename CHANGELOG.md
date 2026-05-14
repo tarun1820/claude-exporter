@@ -6,6 +6,8 @@
 - Bounced chats (original model differs from current) get a `→` marker with a tooltip showing "Originally X, now Y"
 - Model column sorting follows the displayed (original) model
 
+_Published_
+
 ## [1.9.3]
 
 - Snapshot each conversation's current model to `chrome.storage.local` whenever the conversation list is fetched (browse page load or popup "Export All") — preserves the model before a chat gets bounced to a new one on model retirement
