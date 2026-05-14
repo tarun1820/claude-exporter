@@ -28,17 +28,6 @@ function recordExportTimestamps(conversationIds) {
   });
 }
 
-// Default model timeline for null models
-const DEFAULT_MODEL_TIMELINE = [
-  { date: new Date('2024-01-01'), model: 'claude-3-sonnet-20240229' }, // Before June 20, 2024
-  { date: new Date('2024-06-20'), model: 'claude-3-5-sonnet-20240620' }, // Starting June 20, 2024
-  { date: new Date('2024-10-22'), model: 'claude-3-5-sonnet-20241022' }, // Starting October 22, 2024
-  { date: new Date('2025-02-29'), model: 'claude-3-7-sonnet-20250219' }, // Starting February 29, 2025
-  { date: new Date('2025-05-14'), model: 'claude-sonnet-4-20250514' }, // Starting May 14, 2025
-  { date: new Date('2025-09-29'), model: 'claude-sonnet-4-5-20250929' }, // Starting September 29, 2025
-  { date: new Date('2026-02-17'), model: 'claude-sonnet-4-6' } // Starting February 17, 2026
-];
-
 // Helper function to format datetime in local time for filenames
 function getLocalDateTimeString() {
   const now = new Date();
@@ -51,27 +40,6 @@ function getLocalDateTimeString() {
   return `${year}${month}${day}-${hours}${minutes}${seconds}`;
 }
 
-// Infer model for conversations with null model based on date
-function inferModel(conversation) {
-  if (conversation.model) {
-    return conversation.model;
-  }
-  
-  // Use created_at date to determine which default model was active
-  const conversationDate = new Date(conversation.created_at);
-  
-  // Find the appropriate model based on the conversation date
-  // Start from the end and work backwards to find the right period
-  for (let i = DEFAULT_MODEL_TIMELINE.length - 1; i >= 0; i--) {
-    if (conversationDate >= DEFAULT_MODEL_TIMELINE[i].date) {
-      return DEFAULT_MODEL_TIMELINE[i].model;
-    }
-  }
-  
-  // If date is before all known dates, use the first model
-  return DEFAULT_MODEL_TIMELINE[0].model;
-}
-  
   // Fetch conversation data
   async function fetchConversation(orgId, conversationId) {
     const url = `https://claude.ai/api/organizations/${orgId}/chat_conversations/${conversationId}?tree=True&rendering_mode=messages&render_all_tools=true`;

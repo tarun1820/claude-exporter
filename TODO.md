@@ -118,11 +118,38 @@
   - Click the org ID row in the browse settings dropdown to copy it
   - Toast confirms "Org ID copied to clipboard"
 
+- **Vitest unit tests for `utils.js`** (v1.9.2)
+  - 52 tests covering core export logic, model name parsing, and the recently-fixed bugs
+  - Regression coverage for `tool_use.name === 'artifacts'` filter, branch traversal, file extension mapping
+  - `npm test` from `src/`; tests live in `src/tests/`
+  - Canonical source is `chrome/utils.js`; `firefox/utils.js` mirror must stay in sync
+
+- **Extract model utilities to `utils.js`** (v1.9.2)
+  - Moved `formatModelName`, `getModelBadgeClass`, `DEFAULT_MODEL_TIMELINE` out of `content.js`/`browse.js` into shared `utils.js`
+  - Doc-linked the Anthropic model-ID schema in code comments
+
 ## Pending 🔄
 
 ### Critical Priority 🔴
 
 ### High Priority 🟠
+
+- **Prepare for new model families (e.g. Mythos)**
+  - Source of truth: [Anthropic model IDs and versions docs](https://platform.claude.com/docs/en/about-claude/models/model-ids-and-versions)
+  - Current `formatModelName` regex in [chrome/utils.js](chrome/utils.js) hardcodes family ∈ `{sonnet, opus, haiku}` — anything else (e.g. expected `claude-mythos-preview`) falls through to raw-ID display and gets no badge color
+  - Test coverage now pins this behavior — [tests/utils.test.js](tests/utils.test.js) "unknown family fallthrough" suite will fail loudly the day Anthropic ships a new family, prompting a regex bump + new badge CSS class
+  - When a new family lands, the change is small:
+    1. Add family to the `(sonnet|opus|haiku)` regex group in `formatModelName`
+    2. Add an `if (model.includes('mythos'))` branch in `getModelBadgeClass`
+    3. Add `.mythos` CSS class with brand color in popup.html, browse.html, content.css
+    4. Add timeline entry to `DEFAULT_MODEL_TIMELINE` once it becomes the default on claude.ai
+  - Note: `-preview` suffix breaks the version-segment regex (expects `\d{1,2}`); needs special-casing or a broader regex if Anthropic stabilizes that naming
+  - Bedrock/Vertex prefixes intentionally out of scope — claude.ai never serves those
+
+- **`DEFAULT_MODEL_TIMELINE` maintenance**
+  - Every time claude.ai bumps its default model, add an entry; otherwise old null-model conversations get inferred to a now-stale model
+  - Sanity check in [tests/utils.test.js](tests/utils.test.js) confirms every entry parses cleanly through `formatModelName` (catches typos)
+  - Future: consider sourcing from a JSON config file or remote endpoint instead of hardcoded array
 
 - **Track model changes per conversation**
   - `conversation.model` from the API is the *current* model only — when chats get bounced (deprecation, guardrails kicking to Sonnet 4, etc.) the original model is lost
@@ -202,10 +229,11 @@
   - Filter by project, model, artifact
 
 - **Advanced settings menu**
-  - *Language settings*
-  - *Custom CSS*
-  - *Regex mode*
-  - *Custom date/time format*
+  - Verbosity toggle & Debug log
+  - Language settings
+  - Custom CSS
+  - Regex mode
+  - Custom date/time format
     - Custom format string (e.g. `%d/%m/%Y %H:%M`)
     - Toggle time display on/off
 
@@ -233,13 +261,18 @@
   - Option to use regex patterns in the search bar
   - Toggle between plain text and regex mode
 
-- **Help / tutorial in settings menu** (low priority)
+- **Help / tutorial in settings menu**
   - Add a help/getting started option to the settings dropdown
   - Quick overview of features, export options, keyboard shortcuts
 
 - **Minor UI improvements**
   - Export progress spinner
   - Test connection spinner
+
+- **Update screenshots**
+  - Include browse page and popup
+  - Include dark and light mode
+  - 1280x800 or 640x400 jpeg or 24-bit png (no alpha)
 
 ## Bugs 🐛
 

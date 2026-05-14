@@ -108,18 +108,6 @@ function isNewOrUpdated(conv) {
   return new Date(conv.updated_at) > new Date(lastExport);
 }
 
-// Default model timeline for null models
-// Each entry represents when that model became the default
-const DEFAULT_MODEL_TIMELINE = [
-  { date: new Date('2024-01-01'), model: 'claude-3-sonnet-20240229' }, // Before June 20, 2024
-  { date: new Date('2024-06-20'), model: 'claude-3-5-sonnet-20240620' }, // Starting June 20, 2024
-  { date: new Date('2024-10-22'), model: 'claude-3-5-sonnet-20241022' }, // Starting October 22, 2024
-  { date: new Date('2025-02-24'), model: 'claude-3-7-sonnet-20250219' }, // Starting February 24, 2025
-  { date: new Date('2025-05-22'), model: 'claude-sonnet-4-20250514' }, // Starting May 22, 2025
-  { date: new Date('2025-09-29'), model: 'claude-sonnet-4-5-20250929' }, // Starting September 29, 2025
-  { date: new Date('2026-02-17'), model: 'claude-sonnet-4-6' } // Starting February 17, 2026
-];
-
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', async () => {
   initTheme();
@@ -134,27 +122,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadConversations();
   setupEventListeners();
 });
-
-// Infer model for conversations with null model based on date
-function inferModel(conversation) {
-  if (conversation.model) {
-    return conversation.model;
-  }
-  
-  // Use created_at date to determine which default model was active
-  const conversationDate = new Date(conversation.created_at);
-  
-  // Find the appropriate model based on the conversation date
-  // Start from the end and work backwards to find the right period
-  for (let i = DEFAULT_MODEL_TIMELINE.length - 1; i >= 0; i--) {
-    if (conversationDate >= DEFAULT_MODEL_TIMELINE[i].date) {
-      return DEFAULT_MODEL_TIMELINE[i].model;
-    }
-  }
-  
-  // If date is before all known dates, use the first model
-  return DEFAULT_MODEL_TIMELINE[0].model;
-}
 
 // Load organization ID — auto-detect first, fall back to stored
 async function loadOrgId() {
@@ -270,49 +237,11 @@ async function loadConversations() {
   }
 }
 
-// Format model name for display
-function formatModelName(model) {
-  if (!model || !model.startsWith('claude-')) {
-    return model || 'Unknown';
-  }
-
-  // New format: claude-{type}-{major}[-{minor}][-{date}]
-  // e.g., claude-sonnet-4-6, claude-sonnet-4-5-20250929, claude-opus-5-20260101
-  const newFormatMatch = model.match(/^claude-(sonnet|opus|haiku)-(\d+)(?:-(\d{1,2}))?(?:-\d{8})?$/i);
-  if (newFormatMatch) {
-    const [, modelType, major, minor] = newFormatMatch;
-    const modelName = modelType.charAt(0).toUpperCase() + modelType.slice(1);
-    const version = minor ? `${major}.${minor}` : major;
-    return `Claude ${modelName} ${version}`;
-  }
-
-  // Old format: claude-{major}[-{minor}]-{type}-{date}
-  // e.g., claude-3-sonnet-20240229, claude-3-5-sonnet-20240620
-  const oldFormatMatch = model.match(/^claude-(\d+)(?:-(\d+))?-(sonnet|opus|haiku)-\d{8}$/i);
-  if (oldFormatMatch) {
-    const [, major, minor, modelType] = oldFormatMatch;
-    const modelName = modelType.charAt(0).toUpperCase() + modelType.slice(1);
-    const version = minor ? `${major}.${minor}` : major;
-    return `Claude ${modelName} ${version}`;
-  }
-
-  // Return original if can't parse
-  return model;
-}
-
 // Get project name for a conversation
 function getProjectName(conversation) {
   const projectId = conversation.project_uuid || conversation.project_id || conversation.projectUuid;
   if (!projectId) return '-';
   return projectsMap[projectId] || '-';
-}
-
-// Get model badge class
-function getModelBadgeClass(model) {
-  if (model.includes('sonnet')) return 'sonnet';
-  if (model.includes('opus')) return 'opus';
-  if (model.includes('haiku')) return 'haiku';
-  return '';
 }
 
 // Apply filters and sorting
