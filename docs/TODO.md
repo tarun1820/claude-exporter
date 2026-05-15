@@ -1,4 +1,167 @@
 # Claude Exporter - TODO List
+## Pending 🔄
+
+### Critical Priority 🔴
+
+### High Priority 🟠
+
+- **Prepare for new model families (e.g. Mythos)**
+  - Source of truth: [Anthropic model IDs and versions docs](https://platform.claude.com/docs/en/about-claude/models/model-ids-and-versions)
+  - Current `formatModelName` regex in [chrome/utils.js](../chrome/utils.js) hardcodes family ∈ `{sonnet, opus, haiku}` — anything else (e.g. expected `claude-mythos-preview`) falls through to raw-ID display and gets no badge color
+  - Test coverage now pins this behavior — [tests/utils.test.js](../tests/utils.test.js) "unknown family fallthrough" suite will fail loudly the day Anthropic ships a new family, prompting a regex bump + new badge CSS class
+  - When a new family lands, the change is small:
+    1. Add family to the `(sonnet|opus|haiku)` regex group in `formatModelName`
+    2. Add an `if (model.includes('mythos'))` branch in `getModelBadgeClass`
+    3. Add `.mythos` CSS class with brand color in popup.html, browse.html, content.css
+    4. Add timeline entry to `DEFAULT_MODEL_TIMELINE` once it becomes the default on claude.ai
+  - Note: `-preview` suffix breaks the version-segment regex (expects `\d{1,2}`); needs special-casing or a broader regex if Anthropic stabilizes that naming
+  - Bedrock/Vertex prefixes intentionally out of scope — claude.ai never serves those
+
+- **`DEFAULT_MODEL_TIMELINE` maintenance**
+  - Every time claude.ai bumps its default model, add an entry; otherwise old null-model conversations get inferred to a now-stale model
+  - Sanity check in [tests/utils.test.js](../tests/utils.test.js) confirms every entry parses cleanly through `formatModelName` (catches typos)
+  - Future: consider sourcing from a JSON config file or remote endpoint instead of hardcoded array
+
+- **Track model changes per conversation**
+  - **Phase 1 capture SHIPPED (v1.9.3)** — `recordModelSnapshots()` in `content.js` writes `modelSnapshots` to `chrome.storage.local` every time the conversation list is fetched (browse page load or popup "Export All"), not just on export. Stores `{firstSeen, firstSeenAt, current, currentAt, history[]}` per conversation UUID; raw API model only, never an inferred guess.
+  - **Browse-table display SHIPPED (v1.9.4)** — Model column shows the original (first-seen) model via `getDisplayModel()`, with a `→` bounce marker + tooltip when the current model differs. Falls back to current/inferred when no snapshot exists.
+  - Still pending: surface the snapshot in JSON exports (sidecar or inline field); optionally a dedicated "current model" column or filter for bounced chats
+  - `conversation.model` from the API is the *current* model only — when chats get bounced (deprecation, guardrails kicking to Sonnet 4, etc.) the original model is lost
+  - Symptom: chats created before Sonnet 4.5 existed now show "Sonnet 4.5" because that's their current default
+  - 
+  - **API does NOT preserve per-message model data** — confirmed by inspecting an exported JSON; messages have no `model` field. Anthropic doesn't track this server-side (in this endpoint at least).
+  - Approach: snapshot tracking on our side
+    - On every export, record `{conversationId, model, timestamp}` to `chrome.storage.local`
+    - First export of a chat = first known model (call it "first-seen" not "created with" — we can't know the real original for chats that pre-date this feature)
+    - On subsequent exports, if `model` changed since last entry, append a new history entry
+    - Include this history array in JSON exports (sidecar or inline field)
+  - Limitations
+    - For chats that existed before tracking starts, original model is unknowable — fall back to date-inference via `DEFAULT_MODEL_TIMELINE` and label it "inferred"
+    - Misses bounces that happen between two exports of the same chat
+  - UI plan
+    - Phase 1: just record the data + show "first-seen" and "current" models in JSON export
+    - Phase 2 (later): two sortable columns in browse table; for now sort by current model only
+  - Note: `DEFAULT_MODEL_TIMELINE` is duplicated in [browse.js](../chrome/browse.js) and [content.js](../chrome/content.js) — keep in sync
+
+- **Light theme overhaul**
+  - Whole light theme needs work — readability, contrast, color choices across the board
+  - Subsumes the existing "model badge color contrast" issue (Sonnet/Opus/Haiku badges hard to read in light mode)
+  - Audit every component (popup, browse, options, settings dropdown, modals, toasts) against the dark theme as the reference
+  - Consider whether to design light from scratch rather than tweak — current colors feel like dark-mode values dropped onto a light background
+
+### Medium Priority 🟡
+
+- **UI cleanup: Remove redundant "View" button**
+  - Chat name already links to conversation, "View" button may be unnecessary
+  - Frees up that table cell for future artifact-indicator badges
+
+- **Revisit the "organization ID not set up" UI**
+  - Org ID is auto-detected on every export action now (v1.8.12), so the manual setup prompt/UI feels redundant
+  - ⚠️ Don't just delete it — the manually-configured org ID is still the documented *fallback* for when auto-detect fails. Removing it removes that safety net.
+  - Better framing: keep the manual override available (maybe tucked into advanced settings), but drop the upfront "not set up" prompting/empty-state since auto-detect covers the common case
+
+- **Artifact indicators in browse table**
+  - Show icon next to conversation name if it contains artifacts
+  - Add filter options in funnel dropdown: with artifacts / without artifacts
+  
+- **Artifact search/filter in browse view**
+  - Add ability to search or filter conversations by artifact content
+  - Filter by artifact filename, type, or whether artifacts exist
+  - Helps find specific artifacts across all conversations
+
+- **Contact dev / feedback link**
+  - Add to settings dropdown on browse page
+  - Way for users to reach out (feedback, bug reports)
+  
+- **PDF export for artifacts**
+  - Generate PDF versions of artifacts
+  - Useful for documentation and sharing
+
+- **Memory export (global and project-specific)**
+  - Export custom instructions and memory from Claude.ai
+  - Support both global/account-level memory and project-specific memory
+  - Allow backup and archival of configured AI behavior and context
+
+- **Claude Code export**
+  - Support exporting Claude Code conversations
+  - Handle code-specific content and artifacts
+
+- **Local sync / export folder mode**
+  - User defines a local export directory
+  - Extension compares current Claude data against exported files to detect changes
+  - Git-like approach: diff actual content, not just timestamps
+  - More accurate than timestamp-based new/updated detection
+  - Timestamp-based tracking (green dots) remains as the default for users who don't configure a folder
+  - Would need File System Access API or similar for folder read/write
+  - Consider: incremental sync (only export changed conversations) vs full re-export
+
+- **Google Drive integration**
+  - Link/sync exports to Google Drive
+
+- **Remove claude.ai tab dependency**
+  - Use `chrome.cookies` API to read claude.ai session cookies directly
+  - Make API calls from background worker / browse page without needing a relay tab
+  - Would allow browse page and auto-detection to work without an open claude.ai tab
+  - Requires adding `cookies` permission to manifest
+
+- **Robust filter**
+  - Filter by project, model, artifact
+
+- **Advanced settings menu**
+  - Verbosity toggle & Debug log
+  - Language settings
+  - Custom CSS
+  - Regex mode
+  - Custom date/time format
+    - Custom format string (e.g. `%d/%m/%Y %H:%M`)
+    - Toggle time display on/off
+
+- **Don't ask for Organization ID if it's empty**
+  - If the user hasn't set this, display "[Auto]" in the id field of the browse settings popup window
+
+### Low Priority 🟢
+
+- **True cancellation of in-flight bulk export fetches**
+  - Cancel button currently hides the modal immediately, but in-flight batch fetches still run in the background until they finish
+  - Wire up an `AbortController` so the actual `fetch()` calls and ZIP work get aborted on cancel
+  - Mostly cosmetic — saves a few seconds of wasted bandwidth + CPU per cancel
+
+- **In-popup changelog / "What's new"**
+  - Link to summary of changes on version bump
+  - Surfaces UI updates so changes aren't jarring
+  
+- **Branch export options**
+  - Add option to export all branches vs. only current branch
+  - Currently markdown/text only export current branch, JSON exports all
+  - Let users choose their preference for all formats
+  - Useful for preserving alternate conversation paths
+
+- **Model name/ID toggle in table**
+  - Click on model name to toggle between display name and model ID
+
+- **Regex search**
+  - Option to use regex patterns in the search bar
+  - Toggle between plain text and regex mode
+
+- **Help / tutorial in settings menu**
+  - Add a help/getting started option to the settings dropdown
+  - Quick overview of features, export options, keyboard shortcuts
+
+- **Minor UI improvements**
+  - Export progress spinner
+  - Test connection spinner
+
+- **Mark all as..."
+  - Condense "Mark all as exported" and "Mark all as new" to a "Mark all as..." submenu with "New" and "Exported" options
+
+- **Update screenshots**
+  - Include browse page and popup
+  - Include dark and light mode
+  - 1280x800 or 640x400 jpeg or 24-bit png (no alpha)
+
+## Bugs 🐛
+
+(none currently open)
 
 ## Completed ✅
 
@@ -135,161 +298,3 @@
   - v1.9.6: "Advanced Options" link added to the browse settings dropdown (between Time and Test connection) so the options page is reachable from the browse view
   - v1.9.7: backup/restore logic moved to shared `utils.js`; reachable from the browse dropdown via a "Backup/Restore Database" hover submenu. Date/Time format toggles moved out of the dropdown into the options page.
   - Future enhancement: smart per-key merge on restore (e.g. union `modelSnapshots`, keep earliest `firstSeen`) instead of overwrite
-
-## Pending 🔄
-
-### Critical Priority 🔴
-
-### High Priority 🟠
-
-- **Prepare for new model families (e.g. Mythos)**
-  - Source of truth: [Anthropic model IDs and versions docs](https://platform.claude.com/docs/en/about-claude/models/model-ids-and-versions)
-  - Current `formatModelName` regex in [chrome/utils.js](chrome/utils.js) hardcodes family ∈ `{sonnet, opus, haiku}` — anything else (e.g. expected `claude-mythos-preview`) falls through to raw-ID display and gets no badge color
-  - Test coverage now pins this behavior — [tests/utils.test.js](tests/utils.test.js) "unknown family fallthrough" suite will fail loudly the day Anthropic ships a new family, prompting a regex bump + new badge CSS class
-  - When a new family lands, the change is small:
-    1. Add family to the `(sonnet|opus|haiku)` regex group in `formatModelName`
-    2. Add an `if (model.includes('mythos'))` branch in `getModelBadgeClass`
-    3. Add `.mythos` CSS class with brand color in popup.html, browse.html, content.css
-    4. Add timeline entry to `DEFAULT_MODEL_TIMELINE` once it becomes the default on claude.ai
-  - Note: `-preview` suffix breaks the version-segment regex (expects `\d{1,2}`); needs special-casing or a broader regex if Anthropic stabilizes that naming
-  - Bedrock/Vertex prefixes intentionally out of scope — claude.ai never serves those
-
-- **`DEFAULT_MODEL_TIMELINE` maintenance**
-  - Every time claude.ai bumps its default model, add an entry; otherwise old null-model conversations get inferred to a now-stale model
-  - Sanity check in [tests/utils.test.js](tests/utils.test.js) confirms every entry parses cleanly through `formatModelName` (catches typos)
-  - Future: consider sourcing from a JSON config file or remote endpoint instead of hardcoded array
-
-- **Track model changes per conversation**
-  - **Phase 1 capture SHIPPED (v1.9.3)** — `recordModelSnapshots()` in `content.js` writes `modelSnapshots` to `chrome.storage.local` every time the conversation list is fetched (browse page load or popup "Export All"), not just on export. Stores `{firstSeen, firstSeenAt, current, currentAt, history[]}` per conversation UUID; raw API model only, never an inferred guess.
-  - **Browse-table display SHIPPED (v1.9.4)** — Model column shows the original (first-seen) model via `getDisplayModel()`, with a `→` bounce marker + tooltip when the current model differs. Falls back to current/inferred when no snapshot exists.
-  - Still pending: surface the snapshot in JSON exports (sidecar or inline field); optionally a dedicated "current model" column or filter for bounced chats
-  - `conversation.model` from the API is the *current* model only — when chats get bounced (deprecation, guardrails kicking to Sonnet 4, etc.) the original model is lost
-  - Symptom: chats created before Sonnet 4.5 existed now show "Sonnet 4.5" because that's their current default
-  - 
-  - **API does NOT preserve per-message model data** — confirmed by inspecting an exported JSON; messages have no `model` field. Anthropic doesn't track this server-side (in this endpoint at least).
-  - Approach: snapshot tracking on our side
-    - On every export, record `{conversationId, model, timestamp}` to `chrome.storage.local`
-    - First export of a chat = first known model (call it "first-seen" not "created with" — we can't know the real original for chats that pre-date this feature)
-    - On subsequent exports, if `model` changed since last entry, append a new history entry
-    - Include this history array in JSON exports (sidecar or inline field)
-  - Limitations
-    - For chats that existed before tracking starts, original model is unknowable — fall back to date-inference via `DEFAULT_MODEL_TIMELINE` and label it "inferred"
-    - Misses bounces that happen between two exports of the same chat
-  - UI plan
-    - Phase 1: just record the data + show "first-seen" and "current" models in JSON export
-    - Phase 2 (later): two sortable columns in browse table; for now sort by current model only
-  - Note: `DEFAULT_MODEL_TIMELINE` is duplicated in [browse.js](chrome/browse.js) and [content.js](chrome/content.js) — keep in sync
-
-- **Light theme overhaul**
-  - Whole light theme needs work — readability, contrast, color choices across the board
-  - Subsumes the existing "model badge color contrast" issue (Sonnet/Opus/Haiku badges hard to read in light mode)
-  - Audit every component (popup, browse, options, settings dropdown, modals, toasts) against the dark theme as the reference
-  - Consider whether to design light from scratch rather than tweak — current colors feel like dark-mode values dropped onto a light background
-
-### Medium Priority 🟡
-
-- **UI cleanup: Remove redundant "View" button**
-  - Chat name already links to conversation, "View" button may be unnecessary
-  - Frees up that table cell for future artifact-indicator badges
-
-- **Revisit the "organization ID not set up" UI**
-  - Org ID is auto-detected on every export action now (v1.8.12), so the manual setup prompt/UI feels redundant
-  - ⚠️ Don't just delete it — the manually-configured org ID is still the documented *fallback* for when auto-detect fails. Removing it removes that safety net.
-  - Better framing: keep the manual override available (maybe tucked into advanced settings), but drop the upfront "not set up" prompting/empty-state since auto-detect covers the common case
-
-- **Artifact indicators in browse table**
-  - Show icon next to conversation name if it contains artifacts
-  - Add filter options in funnel dropdown: with artifacts / without artifacts
-  
-- **Artifact search/filter in browse view**
-  - Add ability to search or filter conversations by artifact content
-  - Filter by artifact filename, type, or whether artifacts exist
-  - Helps find specific artifacts across all conversations
-
-- **Contact dev / feedback link**
-  - Add to settings dropdown on browse page
-  - Way for users to reach out (feedback, bug reports)
-  
-- **PDF export for artifacts**
-  - Generate PDF versions of artifacts
-  - Useful for documentation and sharing
-
-- **Memory export (global and project-specific)**
-  - Export custom instructions and memory from Claude.ai
-  - Support both global/account-level memory and project-specific memory
-  - Allow backup and archival of configured AI behavior and context
-
-- **Claude Code export**
-  - Support exporting Claude Code conversations
-  - Handle code-specific content and artifacts
-
-- **Local sync / export folder mode**
-  - User defines a local export directory
-  - Extension compares current Claude data against exported files to detect changes
-  - Git-like approach: diff actual content, not just timestamps
-  - More accurate than timestamp-based new/updated detection
-  - Timestamp-based tracking (green dots) remains as the default for users who don't configure a folder
-  - Would need File System Access API or similar for folder read/write
-  - Consider: incremental sync (only export changed conversations) vs full re-export
-
-- **Google Drive integration**
-  - Link/sync exports to Google Drive
-
-- **Remove claude.ai tab dependency**
-  - Use `chrome.cookies` API to read claude.ai session cookies directly
-  - Make API calls from background worker / browse page without needing a relay tab
-  - Would allow browse page and auto-detection to work without an open claude.ai tab
-  - Requires adding `cookies` permission to manifest
-
-- **Robust filter**
-  - Filter by project, model, artifact
-
-- **Advanced settings menu**
-  - Verbosity toggle & Debug log
-  - Language settings
-  - Custom CSS
-  - Regex mode
-  - Custom date/time format
-    - Custom format string (e.g. `%d/%m/%Y %H:%M`)
-    - Toggle time display on/off
-
-### Low Priority 🟢
-
-- **True cancellation of in-flight bulk export fetches**
-  - Cancel button currently hides the modal immediately, but in-flight batch fetches still run in the background until they finish
-  - Wire up an `AbortController` so the actual `fetch()` calls and ZIP work get aborted on cancel
-  - Mostly cosmetic — saves a few seconds of wasted bandwidth + CPU per cancel
-
-- **In-popup changelog / "What's new"**
-  - Link to summary of changes on version bump
-  - Surfaces UI updates so changes aren't jarring
-  
-- **Branch export options**
-  - Add option to export all branches vs. only current branch
-  - Currently markdown/text only export current branch, JSON exports all
-  - Let users choose their preference for all formats
-  - Useful for preserving alternate conversation paths
-
-- **Model name/ID toggle in table**
-  - Click on model name to toggle between display name and model ID
-
-- **Regex search**
-  - Option to use regex patterns in the search bar
-  - Toggle between plain text and regex mode
-
-- **Help / tutorial in settings menu**
-  - Add a help/getting started option to the settings dropdown
-  - Quick overview of features, export options, keyboard shortcuts
-
-- **Minor UI improvements**
-  - Export progress spinner
-  - Test connection spinner
-
-- **Update screenshots**
-  - Include browse page and popup
-  - Include dark and light mode
-  - 1280x800 or 640x400 jpeg or 24-bit png (no alpha)
-
-## Bugs 🐛
-
-(none currently open)

@@ -49,8 +49,8 @@ Keep it concise. Don't duplicate what's already here — update existing section
 
 **After each commit**, update these files:
 
-- **`src/TODO.md`** — Move completed items to the Completed section, update the current version number, clean up any stale entries
-- **`src/CHANGELOG.md`** — Append a short entry under the current version. Create the file if it doesn't exist. Format: `## [X.Y.Z]` header, then bullet points describing changes. Keep entries concise — one line per change is fine
+- **`src/docs/TODO.md`** — Move completed items to the Completed section, update the current version number, clean up any stale entries
+- **`src/docs/CHANGELOG.md`** — Append a short entry under the current version. Create the file if it doesn't exist. Format: `## [X.Y.Z]` header, then bullet points describing changes. Keep entries concise — one line per change is fine
 - The CHANGELOG doubles as store update notes. All changes between the current version and the last `_Published_` marker are what goes into the store listing update
 
 ## Release Process
@@ -65,8 +65,8 @@ When the user asks to create a release for version X.Y.Z:
 4. **ZIP Firefox extension** — `cd src/firefox && zip -r ../../releases/vX.Y.Z/claude-exporter-firefox.zip ./*` (unsigned; user handles .xpi signing via AMO)
 5. **Git tag** — `cd src && git tag vX.Y.Z -m "Release vX.Y.Z"`
 6. **Push tag** — `git push origin vX.Y.Z`
-7. **Create GitHub release** — `gh release create vX.Y.Z ../releases/vX.Y.Z/* --title "vX.Y.Z" --notes "$(changelog excerpt from CHANGELOG.md)"` — use all changes since last `_Published_` marker as the notes
-8. **Mark as published** — Add `_Published_` line after the released version's entries in CHANGELOG.md, commit
+7. **Create GitHub release** — `gh release create vX.Y.Z ../releases/vX.Y.Z/* --title "vX.Y.Z" --notes "$(changelog excerpt from docs/CHANGELOG.md)"` — use all changes since last `_Published_` marker as the notes
+8. **Mark as published** — Add `_Published_` line after the released version's entries in docs/CHANGELOG.md, commit
 
 ## Critical Rules
 
