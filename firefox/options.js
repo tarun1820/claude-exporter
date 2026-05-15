@@ -64,33 +64,10 @@ document.getElementById('testBtn').addEventListener('click', async () => {
   }
 });
 
-// Backup all extension data to a file
+// Backup all extension data to a file (shared logic lives in utils.js)
 document.getElementById('backupBtn').addEventListener('click', () => {
-  chrome.storage.local.get(null, (local) => {
-    chrome.storage.sync.get(null, (sync) => {
-      const backup = {
-        _meta: {
-          app: 'claude-exporter',
-          backupVersion: 1,
-          extensionVersion: chrome.runtime.getManifest().version,
-          createdAt: new Date().toISOString()
-        },
-        local: local || {},
-        sync: sync || {}
-      };
-      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `claude-exporter-backup-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      const snapCount = Object.keys(backup.local.modelSnapshots || {}).length;
-      const exportCount = Object.keys(backup.local.exportTimestamps || {}).length;
-      showStatus('backupStatus', `Backup downloaded — ${snapCount} model snapshot(s), ${exportCount} export record(s).`, 'success');
-    });
+  backupExtensionData((success, message) => {
+    showStatus('backupStatus', message, success ? 'success' : 'error');
   });
 });
 
@@ -103,45 +80,30 @@ document.getElementById('restoreFile').addEventListener('change', (event) => {
   const file = event.target.files[0];
   event.target.value = ''; // allow re-selecting the same file later
   if (!file) return;
+  restoreExtensionData(file, (success, message) => {
+    showStatus('backupStatus', message, success ? 'success' : 'error');
+  });
+});
 
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    let backup;
-    try {
-      backup = JSON.parse(e.target.result);
-    } catch (err) {
-      showStatus('backupStatus', 'Restore failed: the file is not valid JSON.', 'error');
-      return;
-    }
+// Date & Time format preferences (displayed in the browse view)
+function loadDateTimeFormatPrefs() {
+  chrome.storage.local.get(['dateFormat', 'timeFormat'], (result) => {
+    document.getElementById('dateFormatSelect').value = result.dateFormat || 'mdy';
+    document.getElementById('timeFormatSelect').value = result.timeFormat || '12h';
+  });
+}
+loadDateTimeFormatPrefs();
 
-    // Make sure this is actually one of our backup files
-    if (!backup || typeof backup !== 'object' || !backup._meta ||
-        backup._meta.app !== 'claude-exporter' || typeof backup.local !== 'object') {
-      showStatus('backupStatus', 'Restore failed: this does not look like a Claude Exporter backup file.', 'error');
-      return;
-    }
+document.getElementById('dateFormatSelect').addEventListener('change', (e) => {
+  chrome.storage.local.set({ dateFormat: e.target.value }, () => {
+    showStatus('dateTimeStatus', 'Date format saved. Reload the browse page to see the change.', 'success');
+  });
+});
 
-    const snapCount = Object.keys(backup.local.modelSnapshots || {}).length;
-    const exportCount = Object.keys(backup.local.exportTimestamps || {}).length;
-    const proceed = confirm(
-      `Restore this backup?\n\n` +
-      `It contains ${snapCount} model snapshot(s) and ${exportCount} export record(s), ` +
-      `created ${backup._meta.createdAt || 'an unknown date'}.\n\n` +
-      `This overwrites the extension's current data with the backup's contents.`
-    );
-    if (!proceed) {
-      showStatus('backupStatus', 'Restore cancelled.', 'error');
-      return;
-    }
-
-    chrome.storage.local.set(backup.local, () => {
-      const syncData = (backup.sync && typeof backup.sync === 'object') ? backup.sync : {};
-      chrome.storage.sync.set(syncData, () => {
-        showStatus('backupStatus', `Restore complete — ${snapCount} model snapshot(s), ${exportCount} export record(s) restored. Reload any open Claude pages and the browse page to see the changes.`, 'success');
-      });
-    });
-  };
-  reader.readAsText(file);
+document.getElementById('timeFormatSelect').addEventListener('change', (e) => {
+  chrome.storage.local.set({ timeFormat: e.target.value }, () => {
+    showStatus('dateTimeStatus', 'Time format saved. Reload the browse page to see the change.', 'success');
+  });
 });
 
 // Helper functions

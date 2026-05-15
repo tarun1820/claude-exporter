@@ -133,6 +133,7 @@
   - Solves uninstall/reinstall data loss, and migration between separate extension builds (store vs. GitHub) which have separate storage
   - Backup file is structured `{ _meta, local, sync }`; restore validates `_meta.app` and confirms before overwriting
   - v1.9.6: "Advanced Options" link added to the browse settings dropdown (between Time and Test connection) so the options page is reachable from the browse view
+  - v1.9.7: backup/restore logic moved to shared `utils.js`; reachable from the browse dropdown via a "Backup/Restore Database" hover submenu. Date/Time format toggles moved out of the dropdown into the options page.
   - Future enhancement: smart per-key merge on restore (e.g. union `modelSnapshots`, keep earliest `firstSeen`) instead of overwrite
 
 ## Pending 🔄

@@ -649,6 +649,83 @@ function getModelBadgeClass(model) {
   return '';
 }
 
+// ----- Extension data backup / restore -----
+
+// Download all extension storage (local + sync) as a structured JSON file.
+// onComplete(success, message) reports the result so each caller can show it
+// its own way (options page status line vs. browse-page toast).
+function backupExtensionData(onComplete) {
+  chrome.storage.local.get(null, (local) => {
+    chrome.storage.sync.get(null, (sync) => {
+      const backup = {
+        _meta: {
+          app: 'claude-exporter',
+          backupVersion: 1,
+          extensionVersion: chrome.runtime.getManifest().version,
+          createdAt: new Date().toISOString()
+        },
+        local: local || {},
+        sync: sync || {}
+      };
+      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `claude-exporter-backup-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      const snapCount = Object.keys(backup.local.modelSnapshots || {}).length;
+      const exportCount = Object.keys(backup.local.exportTimestamps || {}).length;
+      if (onComplete) onComplete(true, `Backup downloaded — ${snapCount} model snapshot(s), ${exportCount} export record(s).`);
+    });
+  });
+}
+
+// Restore extension storage from a file produced by backupExtensionData.
+// Validates the file, confirms with the user, then writes to local + sync.
+function restoreExtensionData(file, onComplete) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    let backup;
+    try {
+      backup = JSON.parse(e.target.result);
+    } catch (err) {
+      if (onComplete) onComplete(false, 'Restore failed: the file is not valid JSON.');
+      return;
+    }
+
+    // Make sure this is actually one of our backup files
+    if (!backup || typeof backup !== 'object' || !backup._meta ||
+        backup._meta.app !== 'claude-exporter' || typeof backup.local !== 'object') {
+      if (onComplete) onComplete(false, 'Restore failed: this does not look like a Claude Exporter backup file.');
+      return;
+    }
+
+    const snapCount = Object.keys(backup.local.modelSnapshots || {}).length;
+    const exportCount = Object.keys(backup.local.exportTimestamps || {}).length;
+    const proceed = confirm(
+      `Restore this backup?\n\n` +
+      `It contains ${snapCount} model snapshot(s) and ${exportCount} export record(s), ` +
+      `created ${backup._meta.createdAt || 'an unknown date'}.\n\n` +
+      `This overwrites the extension's current data with the backup's contents.`
+    );
+    if (!proceed) {
+      if (onComplete) onComplete(false, 'Restore cancelled.');
+      return;
+    }
+
+    chrome.storage.local.set(backup.local, () => {
+      const syncData = (backup.sync && typeof backup.sync === 'object') ? backup.sync : {};
+      chrome.storage.sync.set(syncData, () => {
+        if (onComplete) onComplete(true, `Restore complete — ${snapCount} model snapshot(s), ${exportCount} export record(s) restored. Reload any open Claude pages and the browse page to see the changes.`);
+      });
+    });
+  };
+  reader.readAsText(file);
+}
+
 // Functions are available globally in the browser context
 // In Node (vitest), expose them via module.exports for testing
 if (typeof module !== 'undefined' && module.exports) {
@@ -668,5 +745,7 @@ if (typeof module !== 'undefined' && module.exports) {
     inferModel,
     formatModelName,
     getModelBadgeClass,
+    backupExtensionData,
+    restoreExtensionData,
   };
 }

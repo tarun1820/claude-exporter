@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.9.7]
+
+- Reorganized the browse settings dropdown: Date and Time format toggles moved to the options page; their slot now holds a "Backup/Restore Database" item with a hover submenu (Backup / Restore)
+- Backup & Restore logic moved into shared `utils.js` so the options page and browse dropdown use one implementation
+- Options page gains a "Date & Time Format" section
+
 ## [1.9.6]
 
 - Added an "Advanced Options" link to the browse page settings dropdown (between Time and Test connection) — opens the options page, making Backup & Restore reachable directly from the browse view

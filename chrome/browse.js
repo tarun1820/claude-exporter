@@ -1100,9 +1100,6 @@ function setupEventListeners() {
       // Update theme label
       const theme = document.documentElement.getAttribute('data-theme') || 'dark';
       document.getElementById('themeLabel').textContent = theme === 'dark' ? 'Dark' : 'Light';
-      // Update datetime format labels
-      document.getElementById('dateFormatLabel').textContent = dateFormat === 'mdy' ? 'M/D/Y' : 'D/M/Y';
-      document.getElementById('timeFormatLabel').textContent = timeFormat;
     }
   });
 
@@ -1169,20 +1166,22 @@ function setupEventListeners() {
     showToast('All conversations marked as new');
   });
 
-  // Date format toggle
-  document.getElementById('toggleDateFormat').addEventListener('click', () => {
-    dateFormat = dateFormat === 'mdy' ? 'dmy' : 'mdy';
-    document.getElementById('dateFormatLabel').textContent = dateFormat === 'mdy' ? 'M/D/Y' : 'D/M/Y';
-    chrome.storage.local.set({ dateFormat });
-    displayConversations();
+  // Backup / Restore Database submenu — shared logic lives in utils.js
+  document.getElementById('backupData').addEventListener('click', () => {
+    backupExtensionData((success, message) => showToast(message, !success));
+    settingsDropdown.classList.remove('open');
   });
 
-  // Time format toggle
-  document.getElementById('toggleTimeFormat').addEventListener('click', () => {
-    timeFormat = timeFormat === '12h' ? '24h' : '12h';
-    document.getElementById('timeFormatLabel').textContent = timeFormat;
-    chrome.storage.local.set({ timeFormat });
-    displayConversations();
+  document.getElementById('restoreData').addEventListener('click', () => {
+    document.getElementById('restoreFileBrowse').click();
+  });
+
+  document.getElementById('restoreFileBrowse').addEventListener('change', (event) => {
+    const file = event.target.files[0];
+    event.target.value = ''; // allow re-selecting the same file later
+    if (!file) return;
+    restoreExtensionData(file, (success, message) => showToast(message, !success));
+    settingsDropdown.classList.remove('open');
   });
 
   // Test connection

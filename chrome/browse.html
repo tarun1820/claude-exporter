@@ -215,6 +215,28 @@
       background: var(--border-color);
       margin: 4px 0;
     }
+
+    .settings-item-has-submenu {
+      position: relative;
+    }
+
+    .settings-submenu {
+      display: none;
+      position: absolute;
+      top: -1px;
+      left: 100%;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      box-shadow: 0 4px 16px var(--shadow-md);
+      min-width: 140px;
+      z-index: 1001;
+      padding: 4px 0;
+    }
+
+    .settings-item-has-submenu:hover .settings-submenu {
+      display: block;
+    }
     
     .controls {
       display: flex;
@@ -734,13 +756,17 @@
               <span class="settings-value">&#8594;</span>
             </div>
             <div class="settings-divider"></div>
-            <div class="settings-item" id="toggleDateFormat">
-              <span class="settings-label">Date</span>
-              <span class="settings-value" id="dateFormatLabel">M/D/Y</span>
-            </div>
-            <div class="settings-item" id="toggleTimeFormat">
-              <span class="settings-label">Time</span>
-              <span class="settings-value" id="timeFormatLabel">12h</span>
+            <div class="settings-item settings-item-has-submenu" id="backupRestore">
+              <span class="settings-label">Backup/Restore Database</span>
+              <span class="settings-value">&#8594;</span>
+              <div class="settings-submenu">
+                <div class="settings-item" id="backupData">
+                  <span class="settings-label">Backup</span>
+                </div>
+                <div class="settings-item" id="restoreData">
+                  <span class="settings-label">Restore</span>
+                </div>
+              </div>
             </div>
             <div class="settings-divider"></div>
             <div class="settings-item" id="advancedOptions">
@@ -752,6 +778,7 @@
               <span class="settings-label">Test connection</span>
               <span class="settings-value" id="connectionStatus"></span>
             </div>
+            <input type="file" id="restoreFileBrowse" accept="application/json,.json" style="display: none;">
           </div>
         </div>
         <h1>Browse Claude Conversations</h1>
