@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.9.9]
+
+- Removed the "Organization ID not configured" setup banner from the popup — org ID is auto-detected from claude.ai on every export action, so the banner was redundant
+- Updated the fallback error message when org ID detection fails: now suggests opening the popup from a claude.ai tab instead of pointing at the removed setup link
+
 ## [1.9.8]
 
 - Markdown export now includes the `truncated` flag in the metadata block (when present in the conversation data)
