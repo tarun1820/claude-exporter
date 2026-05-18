@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.10.6]
+
+- Fixed browse table being cut off on the right when the browser window is narrower than the table — `.conversations-table` was `overflow: hidden`, which clipped and suppressed any scrollbar. Now `overflow-x: auto`, so the table scrolls horizontally when needed while keeping rounded corners.
+
 ## [1.10.5]
 
 - Slimmed the Contact & Diagnostics section: replaced the three buttons (Email developer / Generate diagnostics / Clear log) with two inline links in a single sentence. "Clear log" removed entirely — and `clearDiagnosticsLog` dropped from `utils.js` since nothing calls it.
