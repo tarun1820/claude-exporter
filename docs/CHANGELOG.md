@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.9.17]
+
+- Reverted v1.9.16's two-column Model Display layout — the original stacked layout reads cleaner, especially with the longer descriptions
+
 ## [1.9.16]
 
 - Browse dropdown's "Edit Org ID" and "Advanced Options" now open the options page in the **same tab** instead of a new one — the browser back button returns to the browse view
