@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.9.12]
+
+- Browse table Model column now shows the chat's **current** model (was: original/first-seen, since v1.9.4). Bounced chats — where the current model differs from the first-seen one — get a `*` asterisk marker with a "Originally X" tooltip
+- Rationale: the cell now reflects what model the chat will actually use if you reopen it; the original is still discoverable via the asterisk tooltip
+- Sort by Model column follows the new (current) display name
+
 ## [1.9.11]
 
 - Options page: merged "Test Connection" into the Organization ID section (next to Save Settings) and dropped the standalone "Test Your Settings" section

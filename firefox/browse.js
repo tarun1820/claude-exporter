@@ -74,19 +74,20 @@ async function loadModelSnapshots() {
   });
 }
 
-// Resolve which model to show for a conversation: the original (first-seen)
-// snapshot if we have one, otherwise the current/inferred model. Also reports
-// whether the chat has since been bounced to a different model.
+// Resolve which model to show for a conversation: the current model from the
+// snapshot if we have one, otherwise the conversation's reported/inferred
+// model. Also reports the original (first-seen) model and whether the chat
+// has since been bounced to a different one — bounced chats get a `*` marker.
 function getDisplayModel(conv) {
   const snap = modelSnapshots[conv.uuid];
   if (snap && snap.firstSeen) {
     return {
-      model: snap.firstSeen,
-      current: snap.current || snap.firstSeen,
+      model: snap.current || snap.firstSeen,
+      original: snap.firstSeen,
       bounced: !!snap.current && snap.current !== snap.firstSeen
     };
   }
-  return { model: conv.model, current: conv.model, bounced: false };
+  return { model: conv.model, original: conv.model, bounced: false };
 }
 
 async function saveExportTimestamp(conversationId) {
@@ -443,7 +444,7 @@ function displayConversations() {
         <td>
           <span class="model-badge ${modelBadgeClass}">
             ${escapeHtml(formatModelName(modelInfo.model))}
-          </span>${modelInfo.bounced ? `<span class="model-bounced" title="Originally ${escapeHtml(formatModelName(modelInfo.model))}, now ${escapeHtml(formatModelName(modelInfo.current))}">→</span>` : ''}
+          </span>${modelInfo.bounced ? `<span class="model-bounced" title="Originally ${escapeHtml(formatModelName(modelInfo.original))}">*</span>` : ''}
         </td>
         <td>
           <div class="actions">
