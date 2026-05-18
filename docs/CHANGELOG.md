@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.10.1]
+
+- Browse page funnel menu: new "Search projects" option (below the existing status filters, separated by a divider). When selected, the search bar matches against project names (placeholder updates to "Search projects by name...") and the table shows conversations whose project name matches. Status filters do not apply in this mode.
+
 ## [1.9.17]
 
 - Reverted v1.9.16's two-column Model Display layout — the original stacked layout reads cleaner, especially with the longer descriptions

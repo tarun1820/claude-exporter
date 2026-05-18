@@ -48,7 +48,7 @@ let selectedConversations = new Set(); // Track selected conversation IDs
 let lastCheckedIndex = null; // Track last checked checkbox for shift+click range selection
 let exportTimestamps = {}; // Map conversation UUID to last export timestamp
 let modelSnapshots = {}; // Map conversation UUID to { firstSeen, current, ... } captured by content.js
-let statusFilter = 'all'; // 'all', 'new', 'exported'
+let statusFilter = 'all'; // 'all', 'new', 'exported', or 'projects' (search scope = project names)
 let dateFormat = 'mdy'; // 'mdy' or 'dmy'
 let timeFormat = '12h'; // '12h' or '24h'
 let modelDisplay = 'original'; // 'original' (first-seen) or 'current'
@@ -303,6 +303,13 @@ function applyFiltersAndSort() {
 
   // Filter conversations
   filteredConversations = allConversations.filter(conv => {
+    // 'projects' mode: search scope becomes the project name, status filters do not apply
+    if (statusFilter === 'projects') {
+      if (!searchTerm) return true;
+      const projectName = getProjectName(conv);
+      return projectName && projectName !== '-' && projectName.toLowerCase().includes(searchTerm);
+    }
+
     const matchesSearch = !searchTerm ||
       conv.name.toLowerCase().includes(searchTerm) ||
       (conv.summary && conv.summary.toLowerCase().includes(searchTerm));
@@ -1266,6 +1273,10 @@ function setupEventListeners() {
       // Update selected state
       document.querySelectorAll('.filter-option').forEach(o => o.classList.remove('selected'));
       option.classList.add('selected');
+      // Search bar placeholder reflects the active scope
+      document.getElementById('searchInput').placeholder = statusFilter === 'projects'
+        ? 'Search projects by name...'
+        : 'Search conversations by name...';
       // Update button state
       filterBtn.classList.toggle('active', statusFilter !== 'all');
       filterDropdown.classList.remove('open');
