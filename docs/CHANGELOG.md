@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.10.5]
+
+- Slimmed the Contact & Diagnostics section: replaced the three buttons (Email developer / Generate diagnostics / Clear log) with two inline links in a single sentence. "Clear log" removed entirely — and `clearDiagnosticsLog` dropped from `utils.js` since nothing calls it.
+- Added a `.section a` link style so anchors inside option sections pick up the page's `--link-color` and `--primary-hover` instead of falling back to browser defaults
+
 ## [1.10.4]
 
 - Browse page settings dropdown (and other UI controls) are now interactive immediately on page load — `setupEventListeners()` runs right after `initTheme()` instead of waiting for `loadConversations()` to finish. The settings gear, filter funnel, search bar, and sort headers all work while conversations are still loading.

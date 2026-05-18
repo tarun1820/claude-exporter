@@ -41,7 +41,7 @@
     }
 
     body {
-      width: 800px;
+      width: 810px;
       margin: 40px auto;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       line-height: 1.6;
@@ -204,6 +204,14 @@
     .section p {
       color: var(--text-primary);
     }
+    .section a {
+      color: var(--link-color);
+      text-decoration: underline;
+      cursor: pointer;
+    }
+    .section a:hover {
+      color: var(--primary-hover);
+    }
   </style>
 </head>
 <body>
@@ -279,11 +287,7 @@
 
   <div class="section">
     <h3>Contact &amp; Diagnostics</h3>
-    <p>Found a bug or have feedback? Email the developer — and if you're reporting a bug, attach a diagnostics file so the issue is easier to investigate.</p>
-    <button id="emailDevBtn" style="margin-right: 8px;">Email developer</button>
-    <button id="generateDiagnosticsBtn" style="margin-right: 8px;">Generate diagnostics</button>
-    <button id="clearDiagnosticsBtn">Clear log</button>
-    <p class="example" style="margin-top: 8px;">The diagnostics file contains: extension &amp; browser version, counts of stored snapshots / export records, current preferences, whether an org ID is configured (but not the value), and the last 50 captured errors. All UUIDs (conversation, org, project IDs) are redacted before they're ever stored. Nothing is sent anywhere automatically — you choose whether to attach the file.</p>
+    <p>Found a bug or have feedback? <a href="#" id="emailDevLink">Email the developer</a>. If reporting a bug, please <a href="#" id="generateDiagnosticsLink">attach a diagnostics file</a> (extension/browser info, stored counts, recent errors — all UUIDs redacted, no conversation content).</p>
     <div id="contactStatus" class="status"></div>
   </div>
 

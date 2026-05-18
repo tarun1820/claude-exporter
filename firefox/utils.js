@@ -1043,12 +1043,6 @@ function generateDiagnostics(onComplete) {
   );
 }
 
-function clearDiagnosticsLog(onComplete) {
-  chrome.storage.local.set({ errorLog: [] }, () => {
-    if (onComplete) onComplete(true, 'Diagnostics log cleared.');
-  });
-}
-
 // Functions are available globally in the browser context
 // In Node (vitest), expose them via module.exports for testing
 if (typeof module !== 'undefined' && module.exports) {

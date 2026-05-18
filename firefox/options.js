@@ -128,22 +128,17 @@ document.querySelectorAll('input[name="modelDisplay"]').forEach((radio) => {
 });
 
 // Contact & Diagnostics
-document.getElementById('emailDevBtn').addEventListener('click', () => {
+document.getElementById('emailDevLink').addEventListener('click', (e) => {
+  e.preventDefault();
   const version = chrome.runtime.getManifest().version;
   const subject = encodeURIComponent(`Claude Exporter Bug Report — v${version}`);
-  const body = encodeURIComponent('Describe the issue here. If this is a bug, please attach the diagnostics file generated from the Options page.\n\n');
+  const body = encodeURIComponent('Describe the issue here. If this is a bug, please attach a diagnostics file generated from the Options page.\n\n');
   window.location.href = `mailto:agoramachina@gmail.com?subject=${subject}&body=${body}`;
 });
 
-document.getElementById('generateDiagnosticsBtn').addEventListener('click', () => {
+document.getElementById('generateDiagnosticsLink').addEventListener('click', (e) => {
+  e.preventDefault();
   generateDiagnostics((success, message) => {
-    showStatus('contactStatus', message, success ? 'success' : 'error');
-  });
-});
-
-document.getElementById('clearDiagnosticsBtn').addEventListener('click', () => {
-  if (!confirm('Clear the captured error log? This cannot be undone.')) return;
-  clearDiagnosticsLog((success, message) => {
     showStatus('contactStatus', message, success ? 'success' : 'error');
   });
 });
