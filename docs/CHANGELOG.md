@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.10.8]
+
+- Narrow-viewport fix follow-up: `flex-wrap: wrap` cascaded down into `.export-controls-wrapper`, `.export-settings`, `.export-row`, and `.export-section` so the individual export-options checkboxes and dropdowns can wrap to multiple lines instead of forcing the body wider than the viewport. With the page no longer overflowing, the table's own `overflow-x: auto` scrollbar now actually does the work for the table.
+
 ## [1.10.7]
 
 - Better narrow-viewport behavior on the browse page:
