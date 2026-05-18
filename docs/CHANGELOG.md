@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.11]
+
+- Options page: merged "Test Connection" into the Organization ID section (next to Save Settings) and dropped the standalone "Test Your Settings" section
+- Options page: button text now vertically centered (inline-flex + line-height reset; was inheriting body's 1.6 line-height)
+- Options page: Date format and Time format now sit side-by-side in a two-column grid instead of stacked
+- Mirrored prior `chrome/options.html` CSS tweaks (page width 800px, button padding, `.section h3` margins) into `firefox/options.html` — Firefox copy had fallen behind
+
 ## [1.9.10]
 
 - Popup org-ID error now reads "Failed to obtain organization ID: Please set this value in Options." with "Options" as a clickable link that opens the options page
