@@ -51,6 +51,7 @@ let modelSnapshots = {}; // Map conversation UUID to { firstSeen, current, ... }
 let statusFilter = 'all'; // 'all', 'new', 'exported'
 let dateFormat = 'mdy'; // 'mdy' or 'dmy'
 let timeFormat = '12h'; // '12h' or '24h'
+let modelDisplay = 'original'; // 'original' (first-seen) or 'current'
 
 // Export timestamp storage helpers
 async function loadExportTimestamps() {
@@ -74,20 +75,25 @@ async function loadModelSnapshots() {
   });
 }
 
-// Resolve which model to show for a conversation: the current model from the
-// snapshot if we have one, otherwise the conversation's reported/inferred
-// model. Also reports the original (first-seen) model and whether the chat
-// has since been bounced to a different one — bounced chats get a `*` marker.
+// Resolve which model to show for a conversation. Honors the modelDisplay
+// preference ('original' default, or 'current'). When the chat has been
+// bounced (current differs from first-seen), `bounced` is true and the
+// `*` marker shows the "other" model in its tooltip.
 function getDisplayModel(conv) {
   const snap = modelSnapshots[conv.uuid];
   if (snap && snap.firstSeen) {
+    const original = snap.firstSeen;
+    const current = snap.current || snap.firstSeen;
+    const bounced = !!snap.current && snap.current !== snap.firstSeen;
+    const useCurrent = modelDisplay === 'current';
     return {
-      model: snap.current || snap.firstSeen,
-      original: snap.firstSeen,
-      bounced: !!snap.current && snap.current !== snap.firstSeen
+      model: useCurrent ? current : original,
+      other: useCurrent ? original : current,
+      otherLabel: useCurrent ? 'Originally' : 'Now using',
+      bounced
     };
   }
-  return { model: conv.model, original: conv.model, bounced: false };
+  return { model: conv.model, other: conv.model, otherLabel: '', bounced: false };
 }
 
 async function saveExportTimestamp(conversationId) {
@@ -112,6 +118,15 @@ async function loadDateTimePrefs() {
     chrome.storage.local.get(['dateFormat', 'timeFormat'], (result) => {
       dateFormat = result.dateFormat || 'mdy';
       timeFormat = result.timeFormat || '12h';
+      resolve();
+    });
+  });
+}
+
+async function loadModelDisplayPref() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(['modelDisplay'], (result) => {
+      modelDisplay = result.modelDisplay === 'current' ? 'current' : 'original';
       resolve();
     });
   });
@@ -145,6 +160,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadExportTimestamps();
   await loadModelSnapshots();
   await loadDateTimePrefs();
+  await loadModelDisplayPref();
   const elapsed = Date.now() - loadingStart;
   if (elapsed < 1000) await new Promise(r => setTimeout(r, 1000 - elapsed));
   const loadingText = document.getElementById('loadingText');
@@ -444,7 +460,7 @@ function displayConversations() {
         <td>
           <span class="model-badge ${modelBadgeClass}">
             ${escapeHtml(formatModelName(modelInfo.model))}
-          </span>${modelInfo.bounced ? `<span class="model-bounced" title="Originally ${escapeHtml(formatModelName(modelInfo.original))}">*</span>` : ''}
+          </span>${modelInfo.bounced ? `<span class="model-bounced" title="${modelInfo.otherLabel} ${escapeHtml(formatModelName(modelInfo.other))}">*</span>` : ''}
         </td>
         <td>
           <div class="actions">

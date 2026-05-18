@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.9.14]
+
+- Backup filename changed from `claude-exporter-backup-(timestamp).json` to `claude-database-(timestamp).json`
+- Browse table Model column display is now configurable. Defaults to **Original** (first-seen model, the v1.9.4 behavior); a new "Model Display" section in Options lets you switch to **Current** (v1.9.12 behavior)
+- Bounced chats keep the `*` marker in either mode; the tooltip now shows "Originally X" when displaying current, and "Now using X" when displaying original
+
 ## [1.9.13]
 
 - Backup/Restore renamed throughout to **Export Backup** / **Import Backup** (options page buttons + browse dropdown items)

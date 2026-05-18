@@ -106,6 +106,24 @@ document.getElementById('timeFormatSelect').addEventListener('change', (e) => {
   });
 });
 
+// Model display preference (browse view's Model column)
+function loadModelDisplayPref() {
+  chrome.storage.local.get(['modelDisplay'], (result) => {
+    const value = result.modelDisplay === 'current' ? 'current' : 'original';
+    const radio = document.querySelector(`input[name="modelDisplay"][value="${value}"]`);
+    if (radio) radio.checked = true;
+  });
+}
+loadModelDisplayPref();
+
+document.querySelectorAll('input[name="modelDisplay"]').forEach((radio) => {
+  radio.addEventListener('change', (e) => {
+    chrome.storage.local.set({ modelDisplay: e.target.value }, () => {
+      showStatus('modelDisplayStatus', 'Model display preference saved. Reload the browse page to see the change.', 'success');
+    });
+  });
+});
+
 // Helper functions
 function showStatus(elementId, message, type) {
   const statusEl = document.getElementById(elementId);

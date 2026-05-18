@@ -123,6 +123,32 @@
     .date-time-grid label {
       margin-bottom: 5px;
     }
+    .radio-option {
+      display: block;
+      padding: 10px 12px;
+      border-radius: 5px;
+      margin-top: 8px;
+      cursor: pointer;
+      border: 1px solid var(--border-color);
+      background: var(--bg-body);
+      font-weight: normal;
+    }
+    .radio-option:hover {
+      border-color: var(--primary-color);
+    }
+    .radio-option input {
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+    .radio-option strong {
+      font-weight: 600;
+    }
+    .radio-option .radio-desc {
+      display: block;
+      margin: 4px 0 0 22px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
     .status {
       margin-top: 10px;
       padding: 10px;
@@ -233,6 +259,22 @@
       </div>
     </div>
     <div id="dateTimeStatus" class="status"></div>
+  </div>
+
+  <div class="section">
+    <h3>Model Display</h3>
+    <p>Which model name to show in the browse view's Model column. Bounced chats (where the model has changed) get a small "*" marker either way — the tooltip shows the other model.</p>
+    <label class="radio-option">
+      <input type="radio" name="modelDisplay" value="original">
+      <strong>Original</strong>
+      <span class="radio-desc">The model that first ran the conversation (first-seen). Preserves the original even after the chat gets bounced to a newer model.</span>
+    </label>
+    <label class="radio-option">
+      <input type="radio" name="modelDisplay" value="current">
+      <strong>Current</strong>
+      <span class="radio-desc">The model the conversation uses right now. Reflects what will run if you reopen the chat.</span>
+    </label>
+    <div id="modelDisplayStatus" class="status"></div>
   </div>
 
   <script src="utils.js"></script>

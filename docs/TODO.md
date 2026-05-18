@@ -25,7 +25,7 @@
 
 - **Track model changes per conversation**
   - **Phase 1 capture SHIPPED (v1.9.3)** — `recordModelSnapshots()` in `content.js` writes `modelSnapshots` to `chrome.storage.local` every time the conversation list is fetched (browse page load or popup "Export All"), not just on export. Stores `{firstSeen, firstSeenAt, current, currentAt, history[]}` per conversation UUID; raw API model only, never an inferred guess.
-  - **Browse-table display SHIPPED (v1.9.4, revised v1.9.12)** — Model column shows the **current** model via `getDisplayModel()`, with a `*` asterisk marker + "Originally X" tooltip when the chat has been bounced. Falls back to current/inferred when no snapshot exists. (v1.9.4 originally showed first-seen with a `→` marker; v1.9.12 flipped to current so the cell reflects what model the chat will actually use on reopen.)
+  - **Browse-table display SHIPPED (v1.9.4, revised v1.9.12, configurable v1.9.14)** — Model column shows either the original (first-seen) or current model via `getDisplayModel()`, controlled by the `modelDisplay` preference (default 'original'). Bounced chats get a `*` marker with a tooltip showing the "other" model ("Originally X" when displaying current, "Now using X" when displaying original). Options page "Model Display" section lets users switch.
   - Still pending: surface the snapshot in JSON exports (sidecar or inline field); optionally a dedicated "current model" column or filter for bounced chats
   - `conversation.model` from the API is the *current* model only — when chats get bounced (deprecation, guardrails kicking to Sonnet 4, etc.) the original model is lost
   - Symptom: chats created before Sonnet 4.5 existed now show "Sonnet 4.5" because that's their current default
