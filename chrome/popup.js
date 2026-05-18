@@ -78,8 +78,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     const statusEl = document.getElementById('status');
     statusEl.className = `status ${type}`;
 
-    // Check for 403 errors and add org ID hint with options link
-    if (type === 'error' && (message.includes('403') || message.includes('404'))) {
+    // Swap "Options" for a clickable link when the message points users to the options page
+    if (type === 'error' && message.includes('Please set this value in Options.')) {
+      const linked = message.replace('Options.', '<a href="#" id="statusOpenOptions">Options</a>.');
+      statusEl.innerHTML = linked;
+      document.getElementById('statusOpenOptions').addEventListener('click', (e) => {
+        e.preventDefault();
+        chrome.runtime.openOptionsPage();
+      });
+    } else if (type === 'error' && (message.includes('403') || message.includes('404'))) {
+      // Legacy 403/404 hint
       statusEl.innerHTML = `${message}<br>Is your <a href="#" id="statusOpenOptions">Organization ID</a> correct?`;
       document.getElementById('statusOpenOptions').addEventListener('click', (e) => {
         e.preventDefault();
@@ -108,17 +116,17 @@ document.getElementById('exportCurrent').addEventListener('click', async () => {
     const conversationId = await getCurrentConversationId();
     
     if (!orgId) {
-      throw new Error('Could not detect Organization ID. Make sure you are on a claude.ai tab.');
+      throw new Error('Failed to obtain organization ID: Please set this value in Options.');
     }
     if (!conversationId) {
-      throw new Error('Could not detect conversation ID. Make sure you are on a Claude.ai conversation page.');
+      throw new Error('Could not detect conversation ID. Make sure you are on a claude.ai conversation page.');
     }
     
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     
-    // Check if we're on Claude.ai
+    // Check if we're on claude.ai
     if (!tab.url.includes('claude.ai')) {
-      throw new Error('Please navigate to a Claude.ai conversation page first.');
+      throw new Error('Please navigate to a claude.ai conversation page first.');
     }
       
           chrome.tabs.sendMessage(tab.id, {
@@ -171,7 +179,7 @@ document.getElementById('exportCurrent').addEventListener('click', async () => {
       const orgId = await getOrgId();
       
           if (!orgId) {
-      throw new Error('Could not detect Organization ID. Make sure you are on a claude.ai tab.');
+      throw new Error('Failed to obtain organization ID: Please set this value in Options.');
       }
       
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });

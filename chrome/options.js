@@ -53,7 +53,7 @@ document.getElementById('testBtn').addEventListener('click', async () => {
       const data = await response.json();
       showStatus('testStatus', `Success! Found ${data.length} conversations.`, 'success');
     } else if (response.status === 401) {
-      showStatus('testStatus', 'Not authenticated. Please make sure you are logged into Claude.ai', 'error');
+      showStatus('testStatus', 'Not authenticated. Please make sure you are logged into claude.ai', 'error');
     } else if (response.status === 403) {
       showStatus('testStatus', 'Access denied. The Organization ID might be incorrect.', 'error');
     } else {

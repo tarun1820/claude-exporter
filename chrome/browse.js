@@ -173,7 +173,7 @@ async function loadOrgId() {
     chrome.storage.sync.get(['organizationId'], (result) => {
       orgId = result.organizationId;
       if (!orgId) {
-        showError('Organization ID not configured. Please open a Claude.ai tab and reload this page, or configure it manually in the extension options.');
+        showError('Organization ID not configured. Please open a claude.ai tab and reload this page, or configure it manually in the extension options.');
       }
       resolve();
     });
@@ -191,7 +191,7 @@ function sendMessageToClaudeTab(action, data) {
       }
 
       if (!tabs || tabs.length === 0) {
-        reject(new Error('Please open a Claude.ai tab first to use this feature'));
+        reject(new Error('Please open a claude.ai tab first to use this feature'));
         return;
       }
 

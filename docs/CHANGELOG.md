@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.9.10]
+
+- Popup org-ID error now reads "Failed to obtain organization ID: Please set this value in Options." with "Options" as a clickable link that opens the options page
+- Lowercased "Claude.ai" → "claude.ai" in all user-facing strings (popup, browse, options) to match the actual domain
+
 ## [1.9.9]
 
 - Removed the "Organization ID not configured" setup banner from the popup — org ID is auto-detected from claude.ai on every export action, so the banner was redundant
