@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.9.13]
+
+- Backup/Restore renamed throughout to **Export Backup** / **Import Backup** (options page buttons + browse dropdown items)
+- Import now opens a custom modal showing backup contents (counts + creation date) with two modes:
+  - **Merge** (default) — adds entries not present locally; keeps your current values when they overlap (per-sub-key for UUID-keyed records like exportTimestamps / modelSnapshots)
+  - **Replace all** — overwrites everything with the backup's contents (the prior behavior)
+- Modal supports keyboard (Esc to cancel, Enter to import) and closes when clicking outside
+
 ## [1.9.12]
 
 - Browse table Model column now shows the chat's **current** model (was: original/first-seen, since v1.9.4). Bounced chats — where the current model differs from the first-seen one — get a `*` asterisk marker with a "Originally X" tooltip

@@ -1180,7 +1180,7 @@ function setupEventListeners() {
     const file = event.target.files[0];
     event.target.value = ''; // allow re-selecting the same file later
     if (!file) return;
-    restoreExtensionData(file, (success, message) => showToast(message, !success));
+    importBackup(file, (success, message) => showToast(message, !success));
     settingsDropdown.classList.remove('open');
   });
 

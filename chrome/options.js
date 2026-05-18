@@ -80,7 +80,7 @@ document.getElementById('restoreFile').addEventListener('change', (event) => {
   const file = event.target.files[0];
   event.target.value = ''; // allow re-selecting the same file later
   if (!file) return;
-  restoreExtensionData(file, (success, message) => {
+  importBackup(file, (success, message) => {
     showStatus('backupStatus', message, success ? 'success' : 'error');
   });
 });

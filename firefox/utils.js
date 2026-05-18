@@ -701,49 +701,211 @@ function backupExtensionData(onComplete) {
       URL.revokeObjectURL(url);
       const snapCount = Object.keys(backup.local.modelSnapshots || {}).length;
       const exportCount = Object.keys(backup.local.exportTimestamps || {}).length;
-      if (onComplete) onComplete(true, `Backup downloaded — ${snapCount} model snapshot(s), ${exportCount} export record(s).`);
+      if (onComplete) onComplete(true, `Backup exported — ${snapCount} model snapshot(s), ${exportCount} export record(s).`);
     });
   });
 }
 
-// Restore extension storage from a file produced by backupExtensionData.
-// Validates the file, confirms with the user, then writes to local + sync.
-function restoreExtensionData(file, onComplete) {
+// Conservative merge: for each top-level key in `backup`, if the key is absent
+// locally, copy it over; if both sides are plain objects (UUID-keyed records
+// like exportTimestamps / modelSnapshots), merge their sub-keys with local
+// winning on overlap. Scalar conflicts (org ID, date format, etc.) keep the
+// local value untouched.
+function mergeStorageData(current, backup) {
+  const isPlainObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
+  const result = { ...current };
+  for (const [key, backupVal] of Object.entries(backup || {})) {
+    if (!(key in current)) {
+      result[key] = backupVal;
+    } else if (isPlainObject(current[key]) && isPlainObject(backupVal)) {
+      result[key] = { ...backupVal, ...current[key] };
+    }
+    // else: scalar conflict — current value is already in result, keep it
+  }
+  return result;
+}
+
+// Build and show a modal letting the user choose merge vs replace before
+// importing. onConfirm(mode) fires with 'merge' / 'replace' on Import, or
+// null on Cancel.
+function showImportBackupModal(backup, onConfirm) {
+  if (!document.getElementById('claude-exporter-modal-styles')) {
+    const style = document.createElement('style');
+    style.id = 'claude-exporter-modal-styles';
+    style.textContent = `
+      .ce-modal-overlay {
+        position: fixed; inset: 0; background: rgba(0, 0, 0, 0.55);
+        display: flex; align-items: center; justify-content: center;
+        z-index: 100000; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      }
+      .ce-modal {
+        background: var(--bg-body, #ffffff);
+        color: var(--text-primary, #2c313a);
+        padding: 22px 24px;
+        border-radius: 8px;
+        max-width: 480px; width: 90%;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+        border: 1px solid var(--border-color, #e2e4e9);
+      }
+      .ce-modal h2 { margin: 0 0 14px; font-size: 17px; font-weight: 600; }
+      .ce-modal-info {
+        background: var(--section-bg, var(--bg-card, #f8f9fa));
+        padding: 10px 12px;
+        border-radius: 5px;
+        margin-bottom: 14px;
+        font-size: 13px;
+        line-height: 1.5;
+        border: 1px solid var(--border-color, #e2e4e9);
+      }
+      .ce-modal-option {
+        display: block; padding: 10px 12px; border-radius: 5px;
+        margin-bottom: 8px; cursor: pointer;
+        border: 1px solid var(--border-color, #e2e4e9);
+        background: var(--bg-body, #ffffff);
+        font-size: 13px;
+      }
+      .ce-modal-option:hover { border-color: var(--primary-color, #5d44e8); }
+      .ce-modal-option input { margin-right: 6px; vertical-align: middle; }
+      .ce-modal-option strong { font-weight: 600; }
+      .ce-modal-option-desc {
+        display: block; margin: 4px 0 0 22px;
+        font-size: 12px;
+        color: var(--text-secondary, #666666);
+      }
+      .ce-modal-actions {
+        display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px;
+      }
+      .ce-modal-actions button {
+        padding: 8px 16px; border-radius: 5px; border: none;
+        cursor: pointer; font-size: 14px;
+        display: inline-flex; align-items: center; justify-content: center;
+        line-height: 1;
+      }
+      .ce-modal-cancel {
+        background: var(--section-bg, var(--bg-card, #e9ecef));
+        color: var(--text-primary, #2c313a);
+        border: 1px solid var(--border-color, #e2e4e9) !important;
+      }
+      .ce-modal-import {
+        background: var(--primary-color, #5d44e8);
+        color: #ffffff;
+      }
+      .ce-modal-import:hover { background: var(--primary-hover, #4a35ba); }
+    `;
+    document.head.appendChild(style);
+  }
+
+  // Remove any stale modal before showing a new one
+  const stale = document.querySelector('.ce-modal-overlay');
+  if (stale) stale.remove();
+
+  const snapCount = Object.keys((backup.local && backup.local.modelSnapshots) || {}).length;
+  const exportCount = Object.keys((backup.local && backup.local.exportTimestamps) || {}).length;
+  const createdAt = backup._meta && backup._meta.createdAt
+    ? new Date(backup._meta.createdAt).toLocaleString()
+    : 'unknown date';
+
+  const overlay = document.createElement('div');
+  overlay.className = 'ce-modal-overlay';
+  overlay.innerHTML = `
+    <div class="ce-modal" role="dialog" aria-modal="true" aria-labelledby="ce-modal-title">
+      <h2 id="ce-modal-title">Import Backup</h2>
+      <div class="ce-modal-info">
+        <strong>Backup contents:</strong><br>
+        ${snapCount} model snapshot(s) &middot; ${exportCount} export record(s)<br>
+        Created ${createdAt}
+      </div>
+      <label class="ce-modal-option">
+        <input type="radio" name="ce-import-mode" value="merge" checked>
+        <strong>Merge with current data</strong>
+        <span class="ce-modal-option-desc">Adds entries not present locally; keeps your current values when they overlap.</span>
+      </label>
+      <label class="ce-modal-option">
+        <input type="radio" name="ce-import-mode" value="replace">
+        <strong>Replace all current data</strong>
+        <span class="ce-modal-option-desc">Overwrites everything with this backup's contents.</span>
+      </label>
+      <div class="ce-modal-actions">
+        <button type="button" class="ce-modal-cancel">Cancel</button>
+        <button type="button" class="ce-modal-import">Import</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  const cleanup = (mode) => {
+    overlay.remove();
+    document.removeEventListener('keydown', onKey);
+    onConfirm(mode);
+  };
+  const onKey = (e) => {
+    if (e.key === 'Escape') cleanup(null);
+    else if (e.key === 'Enter') cleanup(overlay.querySelector('input[name="ce-import-mode"]:checked').value);
+  };
+  document.addEventListener('keydown', onKey);
+
+  overlay.querySelector('.ce-modal-cancel').addEventListener('click', () => cleanup(null));
+  overlay.querySelector('.ce-modal-import').addEventListener('click', () => {
+    cleanup(overlay.querySelector('input[name="ce-import-mode"]:checked').value);
+  });
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) cleanup(null); });
+
+  // Focus the default radio so keyboard users can act immediately
+  const firstRadio = overlay.querySelector('input[name="ce-import-mode"]');
+  if (firstRadio) firstRadio.focus();
+}
+
+// Import extension storage from a file produced by backupExtensionData.
+// Validates the file, asks the user (via modal) whether to merge or replace,
+// then writes to local + sync.
+function importBackup(file, onComplete) {
   const reader = new FileReader();
   reader.onload = (e) => {
     let backup;
     try {
       backup = JSON.parse(e.target.result);
     } catch (err) {
-      if (onComplete) onComplete(false, 'Restore failed: the file is not valid JSON.');
+      if (onComplete) onComplete(false, 'Import failed: the file is not valid JSON.');
       return;
     }
 
-    // Make sure this is actually one of our backup files
     if (!backup || typeof backup !== 'object' || !backup._meta ||
         backup._meta.app !== 'claude-exporter' || typeof backup.local !== 'object') {
-      if (onComplete) onComplete(false, 'Restore failed: this does not look like a Claude Exporter backup file.');
+      if (onComplete) onComplete(false, 'Import failed: this does not look like a Claude Exporter backup file.');
       return;
     }
 
-    const snapCount = Object.keys(backup.local.modelSnapshots || {}).length;
-    const exportCount = Object.keys(backup.local.exportTimestamps || {}).length;
-    const proceed = confirm(
-      `Restore this backup?\n\n` +
-      `It contains ${snapCount} model snapshot(s) and ${exportCount} export record(s), ` +
-      `created ${backup._meta.createdAt || 'an unknown date'}.\n\n` +
-      `This overwrites the extension's current data with the backup's contents.`
-    );
-    if (!proceed) {
-      if (onComplete) onComplete(false, 'Restore cancelled.');
-      return;
-    }
+    showImportBackupModal(backup, (mode) => {
+      if (mode === null) {
+        if (onComplete) onComplete(false, 'Import cancelled.');
+        return;
+      }
 
-    chrome.storage.local.set(backup.local, () => {
+      const snapCount = Object.keys(backup.local.modelSnapshots || {}).length;
+      const exportCount = Object.keys(backup.local.exportTimestamps || {}).length;
       const syncData = (backup.sync && typeof backup.sync === 'object') ? backup.sync : {};
-      chrome.storage.sync.set(syncData, () => {
-        if (onComplete) onComplete(true, `Restore complete — ${snapCount} model snapshot(s), ${exportCount} export record(s) restored. Reload any open Claude pages and the browse page to see the changes.`);
-      });
+
+      if (mode === 'replace') {
+        chrome.storage.local.set(backup.local, () => {
+          chrome.storage.sync.set(syncData, () => {
+            if (onComplete) onComplete(true, `Import complete (replace) — ${snapCount} model snapshot(s), ${exportCount} export record(s) restored. Reload any open Claude pages and the browse page to see the changes.`);
+          });
+        });
+      } else {
+        // Merge: missing keys added, conflicts keep local
+        chrome.storage.local.get(null, (currentLocal) => {
+          chrome.storage.sync.get(null, (currentSync) => {
+            const mergedLocal = mergeStorageData(currentLocal || {}, backup.local);
+            const mergedSync = mergeStorageData(currentSync || {}, syncData);
+            chrome.storage.local.set(mergedLocal, () => {
+              chrome.storage.sync.set(mergedSync, () => {
+                if (onComplete) onComplete(true, `Import complete (merge) — added missing entries from backup, kept your current values on overlap. Reload any open Claude pages and the browse page to see the changes.`);
+              });
+            });
+          });
+        });
+      }
     });
   };
   reader.readAsText(file);
@@ -769,6 +931,7 @@ if (typeof module !== 'undefined' && module.exports) {
     formatModelName,
     getModelBadgeClass,
     backupExtensionData,
-    restoreExtensionData,
+    importBackup,
+    mergeStorageData,
   };
 }
