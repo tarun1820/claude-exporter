@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.10.4]
+
+- Browse page settings dropdown (and other UI controls) are now interactive immediately on page load — `setupEventListeners()` runs right after `initTheme()` instead of waiting for `loadConversations()` to finish. The settings gear, filter funnel, search bar, and sort headers all work while conversations are still loading.
+
 ## [1.10.3]
 
 - New Options section: **Contact & Diagnostics**

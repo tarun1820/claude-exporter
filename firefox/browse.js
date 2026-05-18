@@ -162,6 +162,9 @@ window.addEventListener('pageshow', (event) => {
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', async () => {
   initTheme();
+  // Wire up UI listeners (settings dropdown, filters, search, etc.) immediately
+  // so the chrome stays interactive while orgId / conversations are still loading.
+  setupEventListeners();
   const loadingStart = Date.now();
   await loadOrgId();
   await loadExportTimestamps();
@@ -173,7 +176,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const loadingText = document.getElementById('loadingText');
   if (loadingText) loadingText.textContent = 'Loading conversations...';
   await loadConversations();
-  setupEventListeners();
 });
 
 // Load organization ID — auto-detect first, fall back to stored
