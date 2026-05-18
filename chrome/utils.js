@@ -694,7 +694,10 @@ function backupExtensionData(onComplete) {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `claude-database-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}.json`;
+      const now = new Date();
+      const ymd = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+      const hms = `${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
+      a.download = `claude-exporter-backup-${ymd}-${hms}.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);

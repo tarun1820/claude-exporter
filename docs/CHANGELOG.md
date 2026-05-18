@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.9.15]
+
+- Backup filename revised to `claude-exporter-backup-YYYYMMDD-HHMMSS.json` (was `claude-database-YYYY-MM-DDTHH-MM-SS.json` in v1.9.14). Matches the YYYYMMDD-HHMMSS timestamp format used by conversation/artifact exports
+
 ## [1.9.14]
 
 - Backup filename changed from `claude-exporter-backup-(timestamp).json` to `claude-database-(timestamp).json`
