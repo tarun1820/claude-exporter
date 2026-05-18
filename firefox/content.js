@@ -11,6 +11,9 @@ if (window.claudeExporterContentScriptLoaded) {
   window.claudeExporterContentScriptLoaded = true;
   console.log('[Claude Exporter] Content script loading for first time');
 
+// Capture unhandled errors for diagnostics (sanitized, stored in chrome.storage.local)
+if (typeof initErrorCapture === 'function') initErrorCapture('content');
+
 // Note: Organization ID is now stored in extension settings
 // Users need to configure it in the extension options page
 

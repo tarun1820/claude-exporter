@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.10.3]
+
+- New Options section: **Contact & Diagnostics**
+  - **Email developer** — opens a mailto with a pre-filled subject including the version and a short body template
+  - **Generate diagnostics** — downloads `claude-exporter-diagnostics-YYYYMMDD-HHMMSS.json` (extension/browser version, counts of stored records, current preferences, `orgIdConfigured` boolean, and the last 50 captured errors)
+  - **Clear log** — wipes the captured error ring buffer
+- Each context (popup / browse / content script / options) now registers `error` and `unhandledrejection` listeners that push sanitized entries to a 50-entry ring buffer in `chrome.storage.local` (`errorLog` key, FIFO). All UUIDs are replaced with `<id>` at capture time so identifiers are never persisted.
+- Privacy stance: nothing is transmitted automatically. The diagnostics file stays local until the user chooses to attach it. Org ID itself is never included (only a boolean indicating whether one is configured). No conversation content is captured.
+
 ## [1.10.2]
 
 - Removed "Test connection" from the browse settings dropdown — it's already available in Advanced Options (next to Save Settings)

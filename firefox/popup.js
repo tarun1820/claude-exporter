@@ -1,3 +1,6 @@
+// Capture unhandled errors for diagnostics (sanitized, stored in chrome.storage.local)
+if (typeof initErrorCapture === 'function') initErrorCapture('popup');
+
 // Get organization ID from storage (fallback)
 async function getStoredOrgId() {
   return new Promise((resolve) => {

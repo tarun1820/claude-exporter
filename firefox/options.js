@@ -1,3 +1,6 @@
+// Capture unhandled errors for diagnostics (sanitized, stored in chrome.storage.local)
+if (typeof initErrorCapture === 'function') initErrorCapture('options');
+
 // Load saved settings
 document.addEventListener('DOMContentLoaded', () => {
   chrome.storage.sync.get(['organizationId'], (result) => {
@@ -121,6 +124,27 @@ document.querySelectorAll('input[name="modelDisplay"]').forEach((radio) => {
     chrome.storage.local.set({ modelDisplay: e.target.value }, () => {
       showStatus('modelDisplayStatus', 'Model display preference saved. Reload the browse page to see the change.', 'success');
     });
+  });
+});
+
+// Contact & Diagnostics
+document.getElementById('emailDevBtn').addEventListener('click', () => {
+  const version = chrome.runtime.getManifest().version;
+  const subject = encodeURIComponent(`Claude Exporter Bug Report — v${version}`);
+  const body = encodeURIComponent('Describe the issue here. If this is a bug, please attach the diagnostics file generated from the Options page.\n\n');
+  window.location.href = `mailto:agoramachina@gmail.com?subject=${subject}&body=${body}`;
+});
+
+document.getElementById('generateDiagnosticsBtn').addEventListener('click', () => {
+  generateDiagnostics((success, message) => {
+    showStatus('contactStatus', message, success ? 'success' : 'error');
+  });
+});
+
+document.getElementById('clearDiagnosticsBtn').addEventListener('click', () => {
+  if (!confirm('Clear the captured error log? This cannot be undone.')) return;
+  clearDiagnosticsLog((success, message) => {
+    showStatus('contactStatus', message, success ? 'success' : 'error');
   });
 });
 
