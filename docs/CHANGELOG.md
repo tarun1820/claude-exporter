@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.10.7]
+
+- Better narrow-viewport behavior on the browse page:
+  - Header `.controls` now wrap (`flex-wrap: wrap`) so search/filter/export controls flow to multiple rows on narrow windows instead of forcing the whole page wider than the viewport
+  - Table given `min-width: 1200px` so the v1.10.6 `overflow-x: auto` on `.conversations-table` actually triggers — table scrolls horizontally within its container instead of getting cramped or clipped
+
 ## [1.10.6]
 
 - Fixed browse table being cut off on the right when the browser window is narrower than the table — `.conversations-table` was `overflow: hidden`, which clipped and suppressed any scrollbar. Now `overflow-x: auto`, so the table scrolls horizontally when needed while keeping rounded corners.
