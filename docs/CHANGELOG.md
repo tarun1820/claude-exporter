@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.9.16]
+
+- Browse dropdown's "Edit Org ID" and "Advanced Options" now open the options page in the **same tab** instead of a new one — the browser back button returns to the browse view
+- Browse page reloads itself on bfcache-restored pageshow, so preference changes (model display, date/time format) take effect after hitting Back without needing a manual refresh
+- Options page: Model Display radios laid out in a two-column grid
+
 ## [1.9.15]
 
 - Backup filename revised to `claude-exporter-backup-YYYYMMDD-HHMMSS.json` (was `claude-database-YYYY-MM-DDTHH-MM-SS.json` in v1.9.14). Matches the YYYYMMDD-HHMMSS timestamp format used by conversation/artifact exports

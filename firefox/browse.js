@@ -152,6 +152,13 @@ function isNewOrUpdated(conv) {
   return new Date(conv.updated_at) > new Date(lastExport);
 }
 
+// When user navigates back to this page from the options page (bfcache hit),
+// reload so changed preferences (model display, date/time format, etc.) take
+// effect without a manual refresh.
+window.addEventListener('pageshow', (event) => {
+  if (event.persisted) window.location.reload();
+});
+
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', async () => {
   initTheme();
@@ -1149,16 +1156,14 @@ function setupEventListeners() {
     settingsDropdown.classList.remove('open');
   });
 
-  // Edit org ID — open options page
+  // Edit org ID — open options in the same tab so the back button returns here
   document.getElementById('editOrgId').addEventListener('click', () => {
-    chrome.runtime.openOptionsPage();
-    settingsDropdown.classList.remove('open');
+    window.location.href = chrome.runtime.getURL('options.html');
   });
 
-  // Advanced Options — open options page
+  // Advanced Options — open options in the same tab so the back button returns here
   document.getElementById('advancedOptions').addEventListener('click', () => {
-    chrome.runtime.openOptionsPage();
-    settingsDropdown.classList.remove('open');
+    window.location.href = chrome.runtime.getURL('options.html');
   });
 
   // Mark all as exported
