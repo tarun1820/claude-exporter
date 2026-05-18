@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.10.2]
+
+- Removed "Test connection" from the browse settings dropdown — it's already available in Advanced Options (next to Save Settings)
+- Model column "*" bounce marker now matches the badge color per family (Sonnet/Opus/Haiku/default), full opacity
+- Tooltip on bounced model cells now fires when hovering the badge or the asterisk (wrapped in a `.model-cell` with the `title` attribute)
+- Popup header title is now read from `manifest.name`, so the testing branch's "Claude Exporter Beta" appears in the popup automatically. CLAUDE.md updated.
+
 ## [1.10.1]
 
 - Browse page funnel menu: new "Search projects" option (below the existing status filters, separated by a divider). When selected, the search bar matches against project names (placeholder updates to "Search projects by name...") and the table shows conversations whose project name matches. Status filters do not apply in this mode.

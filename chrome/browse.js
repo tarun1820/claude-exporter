@@ -89,7 +89,7 @@ function getDisplayModel(conv) {
     return {
       model: useCurrent ? current : original,
       other: useCurrent ? original : current,
-      otherLabel: useCurrent ? 'Originally' : 'Now using',
+      otherLabel: useCurrent ? 'Originally' : 'Currently',
       bounced
     };
   }
@@ -472,9 +472,10 @@ function displayConversations() {
         <td class="date">${escapeHtml(updatedDate)}<br><span class="time">${escapeHtml(updatedTime)}</span></td>
         <td class="date">${escapeHtml(createdDate)}<br><span class="time">${escapeHtml(createdTime)}</span></td>
         <td>
-          <span class="model-badge ${modelBadgeClass}">
-            ${escapeHtml(formatModelName(modelInfo.model))}
-          </span>${modelInfo.bounced ? `<span class="model-bounced" title="${modelInfo.otherLabel} ${escapeHtml(formatModelName(modelInfo.other))}">*</span>` : ''}
+          ${modelInfo.bounced
+            ? `<span class="model-cell" title="${modelInfo.otherLabel} ${escapeHtml(formatModelName(modelInfo.other))}"><span class="model-badge ${modelBadgeClass}">${escapeHtml(formatModelName(modelInfo.model))}</span><span class="model-bounced ${modelBadgeClass}">*</span></span>`
+            : `<span class="model-badge ${modelBadgeClass}">${escapeHtml(formatModelName(modelInfo.model))}</span>`
+          }
         </td>
         <td>
           <div class="actions">
@@ -1211,25 +1212,6 @@ function setupEventListeners() {
     if (!file) return;
     importBackup(file, (success, message) => showToast(message, !success));
     settingsDropdown.classList.remove('open');
-  });
-
-  // Test connection
-  document.getElementById('testConnection').addEventListener('click', async () => {
-    const statusEl = document.getElementById('connectionStatus');
-    statusEl.textContent = 'Testing...';
-    try {
-      const response = await sendMessageToClaudeTab('loadConversations', { orgId });
-      if (response && response.success) {
-        statusEl.textContent = `OK (${response.conversations.length})`;
-        statusEl.style.color = '#22c55e';
-      } else {
-        statusEl.textContent = 'Failed';
-        statusEl.style.color = '#ef4444';
-      }
-    } catch (e) {
-      statusEl.textContent = 'Error';
-      statusEl.style.color = '#ef4444';
-    }
   });
 
   // Search input

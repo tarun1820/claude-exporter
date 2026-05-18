@@ -35,8 +35,10 @@ async function getOrgId() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // Display version from manifest
+  // Pull the popup title + version from the manifest so the testing branch
+  // shows "Claude Exporter Beta" without a separate HTML edit.
   const manifest = chrome.runtime.getManifest();
+  document.getElementById('header-title').textContent = manifest.name;
   document.getElementById('header-version').textContent = `v${manifest.version}`;
 
   // Handle checkbox dependencies

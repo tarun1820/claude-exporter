@@ -89,6 +89,8 @@ Any export producing more than one file should always create a ZIP — never tri
 - `"Claude Exporter"` on the `main` branch (released version)
 - `"Claude Exporter Beta"` on the `testing` branch (so the user can tell at a glance which build is loaded)
 
+The popup header title is populated from `manifest.name` in `popup.js` (`#header-title`), so the popup automatically reads "Claude Exporter Beta" on the testing branch — no separate HTML edit needed.
+
 When merging `testing` → `main` for a release, flip both manifest names to drop "Beta" as part of the merge.
 
 ## Testing

@@ -577,7 +577,15 @@
       margin-left: 4px;
       font-size: 12px;
       color: var(--badge-default);
-      opacity: 0.7;
+    }
+
+    .model-bounced.sonnet { color: var(--badge-sonnet); }
+    .model-bounced.haiku  { color: var(--badge-haiku); }
+    .model-bounced.opus   { color: var(--badge-opus); }
+
+    /* Wrapper that carries the tooltip + cursor so hover works on the badge or asterisk */
+    .model-cell {
+      display: inline-block;
       cursor: help;
     }
 
@@ -779,11 +787,6 @@
             <div class="settings-item" id="advancedOptions">
               <span class="settings-label">Advanced Options</span>
               <span class="settings-value">&#8594;</span>
-            </div>
-            <div class="settings-divider"></div>
-            <div class="settings-item" id="testConnection">
-              <span class="settings-label">Test connection</span>
-              <span class="settings-value" id="connectionStatus"></span>
             </div>
             <input type="file" id="restoreFileBrowse" accept="application/json,.json" style="display: none;">
           </div>
