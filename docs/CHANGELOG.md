@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.10.13]
+
+- Fixed duplicate toast on single-conversation export. `exportConversation` was emitting three toasts on a successful export ("Exporting X...", then a branch-specific "Exported: X with N artifact(s)" or "Exported: X (no artifacts found)", then the unified "Exported: X" at the end). Removed the branch-specific toasts in Chrome — the unified post-save toast already covers all branches. Firefox already had this pattern; Chrome had regressed.
+
 ## [1.10.12]
 
 - Chrome/Firefox parity sync — multiple files had quietly drifted out of sync over recent edits. Brought Firefox into line with Chrome (the canonical copy per CLAUDE.md):

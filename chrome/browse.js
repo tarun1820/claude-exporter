@@ -738,7 +738,7 @@ async function exportConversation(conversationId, conversationName) {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
 
-        showToast(`Exported: ${conversationName} with ${artifactFiles.length} artifact(s)`);
+        // Toast handled below after timestamp save
       } else {
         // No artifacts found, export normally
         let content, filename, type;
@@ -759,7 +759,6 @@ async function exportConversation(conversationId, conversationName) {
             type = 'application/json';
         }
         downloadFile(content, filename, type);
-        showToast(`Exported: ${conversationName} (no artifacts found)`);
       }
     } else {
       // Normal export without artifact extraction
