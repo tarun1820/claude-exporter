@@ -342,13 +342,13 @@
     .conversations-table {
       background: var(--bg-card);
       border-radius: 8px;
-      overflow-x: auto;
+      overflow: hidden;
       box-shadow: 0 2px 8px var(--shadow-sm);
     }
 
     table {
       width: 100%;
-      min-width: 1200px;
+      min-width: 1100px;
       border-collapse: collapse;
     }
 
@@ -628,16 +628,6 @@
 
     .btn-export:hover {
       background: var(--primary-hover);
-    }
-
-    .btn-view {
-      background: var(--secondary-bg);
-      color: var(--text-primary);
-    }
-
-    .btn-view:hover {
-      background: var(--hover-bg);
-      filter: brightness(0.95);
     }
 
     .btn-small:disabled {

@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.10.9]
+
+- Removed the redundant "View" button from the browse table — the chat name in the Name column already links to the conversation. Dropped the button, its click handler, and the `.btn-view` CSS.
+- Browse table no longer scrolls horizontally on its own. `.conversations-table` is back to `overflow: hidden`, so when the viewport is narrower than the table's `min-width` (now 1100px, was 1200px), the **page** scrolls horizontally instead of the table container. Cleaner — single scrollbar.
+
 ## [1.10.8]
 
 - Narrow-viewport fix follow-up: `flex-wrap: wrap` cascaded down into `.export-controls-wrapper`, `.export-settings`, `.export-row`, and `.export-section` so the individual export-options checkboxes and dropdowns can wrap to multiple lines instead of forcing the body wider than the viewport. With the page no longer overflowing, the table's own `overflow-x: auto` scrollbar now actually does the work for the table.

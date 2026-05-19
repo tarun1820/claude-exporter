@@ -52,10 +52,6 @@
 
 ### Medium Priority 🟡
 
-- **UI cleanup: Remove redundant "View" button**
-  - Chat name already links to conversation, "View" button may be unnecessary
-  - Frees up that table cell for future artifact-indicator badges
-
 - **Artifact indicators in browse table**
   - Show icon next to conversation name if it contains artifacts
   - Add filter options in funnel dropdown: with artifacts / without artifacts
@@ -160,6 +156,9 @@
 (none currently open)
 
 ## Completed ✅
+
+- **Removed redundant "View" button from browse table** (v1.10.9)
+  - Chat name in the Name column is already a clickable link to the conversation; the "View" button duplicated that. Removed the button, handler, and `.btn-view` CSS. Narrower Actions column lets table `min-width` drop from 1200px to 1100px.
 
 - **Removed redundant "Organization ID not set up" popup banner** (v1.9.9)
   - Org ID auto-detected on every export action (v1.8.12) made the upfront banner redundant

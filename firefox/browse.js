@@ -484,9 +484,6 @@ function displayConversations() {
             <button class="btn-small btn-export" data-id="${escapeHtml(conv.uuid)}" data-name="${escapeHtml(conv.name)}">
               Export
             </button>
-            <button class="btn-small btn-view" data-id="${escapeHtml(conv.uuid)}">
-              View
-            </button>
           </div>
         </td>
         <td class="checkbox-col">
@@ -512,14 +509,6 @@ function displayConversations() {
     });
   });
   
-  // Add view button listeners
-  document.querySelectorAll('.btn-view').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const conversationId = e.target.dataset.id;
-      window.open(`https://claude.ai/chat/${conversationId}`, '_blank');
-    });
-  });
-
   // Add checkbox listeners (use 'click' instead of 'change' to capture shift key)
   document.querySelectorAll('.conversation-checkbox').forEach(checkbox => {
     checkbox.addEventListener('click', handleCheckboxChange);
