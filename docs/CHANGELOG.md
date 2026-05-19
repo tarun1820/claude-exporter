@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.10.10]
+
+- Browse page `body { min-width: 1140px }` so the page itself never shrinks below the table's natural width. When the viewport is narrower, the page (not the table) scrolls horizontally — the table always displays all columns at full width, no clipping, no shrinking.
+
 ## [1.10.9]
 
 - Removed the redundant "View" button from the browse table — the chat name in the Name column already links to the conversation. Dropped the button, its click handler, and the `.btn-view` CSS.
