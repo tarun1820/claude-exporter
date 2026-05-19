@@ -825,10 +825,13 @@ async function exportAllFiltered() {
   // Determine which conversations to export
   let conversationsToExport;
   if (selectedConversations.size > 0) {
-    // Export only selected conversations
-    conversationsToExport = filteredConversations.filter(conv => selectedConversations.has(conv.uuid));
+    // Export ALL selected conversations, even ones currently hidden by the
+    // filter — the checkbox is the user's explicit choice, the filter is just
+    // a view. The "Export Selected (N)" button text already reflects the
+    // full selection count, so users aren't surprised.
+    conversationsToExport = allConversations.filter(conv => selectedConversations.has(conv.uuid));
   } else {
-    // Export all filtered conversations
+    // No explicit selection: export everything currently visible.
     conversationsToExport = filteredConversations;
   }
 

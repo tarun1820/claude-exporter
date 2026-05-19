@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.10.16]
+
+- "Export Selected" now exports every checked conversation, including ones currently hidden by the funnel filter or search. Before, the export was intersected with `filteredConversations`, silently dropping checked-but-not-visible chats. The header checkbox still operates only on visible rows (unchanged).
+
 ## [1.10.15]
 
 - Fixed artifact extraction silently dropping all artifacts in conversations where Anthropic's `enabled_artifacts_attachments` setting is false. In that mode Claude uses the skills-runner `create_file` MCP tool instead of the legacy `artifacts` tool — same `display_content` shape (json_block with language / code / filename), different `tool_use.name`. The v1.9.1 strict allowlist (`name === 'artifacts'`) was rejecting it. Allowlist now accepts `'artifacts'` or `'create_file'`. Added two regression tests covering the create_file pattern and a negative case for non-artifact skills tools (`view`, etc.) that share the same display shape.
