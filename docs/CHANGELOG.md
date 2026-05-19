@@ -4,6 +4,8 @@
 
 - Fixed artifact extraction silently dropping all artifacts in conversations where Anthropic's `enabled_artifacts_attachments` setting is false. In that mode Claude uses the skills-runner `create_file` MCP tool instead of the legacy `artifacts` tool — same `display_content` shape (json_block with language / code / filename), different `tool_use.name`. The v1.9.1 strict allowlist (`name === 'artifacts'`) was rejecting it. Allowlist now accepts `'artifacts'` or `'create_file'`. Added two regression tests covering the create_file pattern and a negative case for non-artifact skills tools (`view`, etc.) that share the same display shape.
 
+_Published_
+
 ## [1.10.14]
 
 - Single-conversation export toast now includes the artifact count when applicable: `Exported: X with N artifact(s)` when artifacts were extracted, `Exported: X` otherwise. Tracked via a function-scope `artifactCount` set inside the extraction branch so the unified post-save toast can read it without restoring the old double-toast pattern.
