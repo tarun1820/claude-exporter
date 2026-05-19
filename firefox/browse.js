@@ -89,7 +89,7 @@ function getDisplayModel(conv) {
     return {
       model: useCurrent ? current : original,
       other: useCurrent ? original : current,
-      otherLabel: useCurrent ? 'Originally' : 'Now using',
+      otherLabel: useCurrent ? 'Originally' : 'Currently',
       bounced
     };
   }

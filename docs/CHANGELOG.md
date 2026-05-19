@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.10.12]
+
+- Chrome/Firefox parity sync — multiple files had quietly drifted out of sync over recent edits. Brought Firefox into line with Chrome (the canonical copy per CLAUDE.md):
+  - `popup.html`: removed Chrome typo `dd` after `--error-text: #ff9999;`; synced Firefox `label { margin: 6px 0 }` → `6px`
+  - `browse.html`: synced Firefox `td { padding: 15px }` → `15px 20px`; removed stale `.btn-view` CSS from Firefox (cleanup missed in v1.10.9); bumped Firefox body `min-width` 1140 → 1200 and added `min-width: 1200px` to `.container` to match Chrome's recent layout tweak
+  - `browse.js`: synced Firefox tooltip label `"Now using"` → `"Currently"`
+  - `options.html`: synced Firefox `width: 800px` → `810px`
+  - `content.js`: removed Firefox-only `[Claude Exporter]` debug `console.log` statements from the top of the file
+- Two functional differences left untouched pending direction: `browse.js` toast handling in `exportConversation` differs (Chrome emits inline `showToast` calls per branch; Firefox has them removed with a `// Toast handled below after timestamp save` comment).
+
 ## [1.10.11]
 
 - Browse table: checkbox column now `text-align: right` so the checkbox stays anchored to the right edge with consistent padding when the table grows on wider viewports (was `text-align: center`, which drifted the checkbox toward the middle of an expanding cell).
