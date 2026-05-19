@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.10.14]
+
+- Single-conversation export toast now includes the artifact count when applicable: `Exported: X with N artifact(s)` when artifacts were extracted, `Exported: X` otherwise. Tracked via a function-scope `artifactCount` set inside the extraction branch so the unified post-save toast can read it without restoring the old double-toast pattern.
+
 ## [1.10.13]
 
 - Fixed duplicate toast on single-conversation export. `exportConversation` was emitting three toasts on a successful export ("Exporting X...", then a branch-specific "Exported: X with N artifact(s)" or "Exported: X (no artifacts found)", then the unified "Exported: X" at the end). Removed the branch-specific toasts in Chrome — the unified post-save toast already covers all branches. Firefox already had this pattern; Chrome had regressed.

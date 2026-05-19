@@ -652,6 +652,9 @@ async function exportConversation(conversationId, conversationName) {
   const artifactFormat = document.getElementById('artifactFormat').value;
   const flattenArtifacts = document.getElementById('flattenArtifacts').checked;
 
+  // Tracked at function scope so the unified post-save toast can mention it
+  let artifactCount = 0;
+
   try {
     showToast(`Exporting ${conversationName}...`);
 
@@ -679,6 +682,7 @@ async function exportConversation(conversationId, conversationName) {
       const artifactFiles = extractArtifactFiles(data, artifactFormat);
 
       if (artifactFiles.length > 0) {
+        artifactCount = artifactFiles.length;
         // Create a ZIP with artifacts (and optionally conversation)
         const zip = new JSZip();
 
@@ -790,7 +794,9 @@ async function exportConversation(conversationId, conversationName) {
 
     // Record export timestamp and refresh display
     await saveExportTimestamp(conversationId);
-    showToast(`Exported: ${conversationName}`);
+    showToast(artifactCount > 0
+      ? `Exported: ${conversationName} with ${artifactCount} artifact(s)`
+      : `Exported: ${conversationName}`);
     displayConversations();
     updateStats();
 
