@@ -736,10 +736,11 @@ function mergeStorageData(current, backup) {
   return result;
 }
 
-// Build and show a modal letting the user choose merge vs replace before
-// importing. onConfirm(mode) fires with 'merge' / 'replace' on Import, or
-// null on Cancel.
-function showImportBackupModal(backup, onConfirm) {
+// Show a modal letting the user choose merge vs replace BEFORE the OS file
+// picker opens. onConfirm(mode) fires with 'merge' / 'replace' when the user
+// commits, or null on Cancel / Esc / overlay click. The caller is responsible
+// for opening the file picker after a non-null mode.
+function showImportModeModal(onConfirm) {
   if (!document.getElementById('claude-exporter-modal-styles')) {
     const style = document.createElement('style');
     style.id = 'claude-exporter-modal-styles';
@@ -810,21 +811,13 @@ function showImportBackupModal(backup, onConfirm) {
   const stale = document.querySelector('.ce-modal-overlay');
   if (stale) stale.remove();
 
-  const snapCount = Object.keys((backup.local && backup.local.modelSnapshots) || {}).length;
-  const exportCount = Object.keys((backup.local && backup.local.exportTimestamps) || {}).length;
-  const createdAt = backup._meta && backup._meta.createdAt
-    ? new Date(backup._meta.createdAt).toLocaleString()
-    : 'unknown date';
-
   const overlay = document.createElement('div');
   overlay.className = 'ce-modal-overlay';
   overlay.innerHTML = `
     <div class="ce-modal" role="dialog" aria-modal="true" aria-labelledby="ce-modal-title">
       <h2 id="ce-modal-title">Import Backup</h2>
       <div class="ce-modal-info">
-        <strong>Backup contents:</strong><br>
-        ${snapCount} model snapshot(s) &middot; ${exportCount} export record(s)<br>
-        Created ${createdAt}
+        Choose how the imported data should be combined with your current data, then pick a backup file.
       </div>
       <label class="ce-modal-option">
         <input type="radio" name="ce-import-mode" value="merge" checked>
@@ -838,7 +831,7 @@ function showImportBackupModal(backup, onConfirm) {
       </label>
       <div class="ce-modal-actions">
         <button type="button" class="ce-modal-cancel">Cancel</button>
-        <button type="button" class="ce-modal-import">Import</button>
+        <button type="button" class="ce-modal-import">Choose File&hellip;</button>
       </div>
     </div>
   `;
@@ -868,9 +861,10 @@ function showImportBackupModal(backup, onConfirm) {
 }
 
 // Import extension storage from a file produced by backupExtensionData.
-// Validates the file, asks the user (via modal) whether to merge or replace,
-// then writes to local + sync.
-function importBackup(file, onComplete) {
+// Validates the file, then writes to local + sync using the supplied mode
+// ('merge' or 'replace'). The mode choice is made BEFORE the file picker
+// opens (see showImportModeModal), so this function just executes.
+function importBackup(file, mode, onComplete) {
   const reader = new FileReader();
   reader.onload = (e) => {
     let backup;
@@ -887,37 +881,30 @@ function importBackup(file, onComplete) {
       return;
     }
 
-    showImportBackupModal(backup, (mode) => {
-      if (mode === null) {
-        if (onComplete) onComplete(false, 'Import cancelled.');
-        return;
-      }
+    const snapCount = Object.keys(backup.local.modelSnapshots || {}).length;
+    const exportCount = Object.keys(backup.local.exportTimestamps || {}).length;
+    const syncData = (backup.sync && typeof backup.sync === 'object') ? backup.sync : {};
 
-      const snapCount = Object.keys(backup.local.modelSnapshots || {}).length;
-      const exportCount = Object.keys(backup.local.exportTimestamps || {}).length;
-      const syncData = (backup.sync && typeof backup.sync === 'object') ? backup.sync : {};
-
-      if (mode === 'replace') {
-        chrome.storage.local.set(backup.local, () => {
-          chrome.storage.sync.set(syncData, () => {
-            if (onComplete) onComplete(true, `Import complete (replace) — ${snapCount} model snapshot(s), ${exportCount} export record(s) restored. Reload any open Claude pages and the browse page to see the changes.`);
-          });
+    if (mode === 'replace') {
+      chrome.storage.local.set(backup.local, () => {
+        chrome.storage.sync.set(syncData, () => {
+          if (onComplete) onComplete(true, `Import complete (replace) — ${snapCount} model snapshot(s), ${exportCount} export record(s) restored. Reload any open Claude pages and the browse page to see the changes.`);
         });
-      } else {
-        // Merge: missing keys added, conflicts keep local
-        chrome.storage.local.get(null, (currentLocal) => {
-          chrome.storage.sync.get(null, (currentSync) => {
-            const mergedLocal = mergeStorageData(currentLocal || {}, backup.local);
-            const mergedSync = mergeStorageData(currentSync || {}, syncData);
-            chrome.storage.local.set(mergedLocal, () => {
-              chrome.storage.sync.set(mergedSync, () => {
-                if (onComplete) onComplete(true, `Import complete (merge) — added missing entries from backup, kept your current values on overlap. Reload any open Claude pages and the browse page to see the changes.`);
-              });
+      });
+    } else {
+      // Merge: missing keys added, conflicts keep local
+      chrome.storage.local.get(null, (currentLocal) => {
+        chrome.storage.sync.get(null, (currentSync) => {
+          const mergedLocal = mergeStorageData(currentLocal || {}, backup.local);
+          const mergedSync = mergeStorageData(currentSync || {}, syncData);
+          chrome.storage.local.set(mergedLocal, () => {
+            chrome.storage.sync.set(mergedSync, () => {
+              if (onComplete) onComplete(true, `Import complete (merge) — added missing entries from backup, kept your current values on overlap. Reload any open Claude pages and the browse page to see the changes.`);
             });
           });
         });
-      }
-    });
+      });
+    }
   };
   reader.readAsText(file);
 }

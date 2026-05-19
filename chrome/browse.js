@@ -1201,16 +1201,26 @@ function setupEventListeners() {
     settingsDropdown.classList.remove('open');
   });
 
+  // Import flow: mode-choice modal → file picker → import.
+  // pendingImportMode bridges the async file-picker boundary.
+  let pendingImportMode = null;
+
   document.getElementById('restoreData').addEventListener('click', () => {
-    document.getElementById('restoreFileBrowse').click();
+    settingsDropdown.classList.remove('open');
+    showImportModeModal((mode) => {
+      if (mode === null) return; // user cancelled
+      pendingImportMode = mode;
+      document.getElementById('restoreFileBrowse').click();
+    });
   });
 
   document.getElementById('restoreFileBrowse').addEventListener('change', (event) => {
     const file = event.target.files[0];
     event.target.value = ''; // allow re-selecting the same file later
-    if (!file) return;
-    importBackup(file, (success, message) => showToast(message, !success));
-    settingsDropdown.classList.remove('open');
+    const mode = pendingImportMode;
+    pendingImportMode = null; // consume; never reuse a stale mode
+    if (!file || !mode) return;
+    importBackup(file, mode, (success, message) => showToast(message, !success));
   });
 
   // Search input

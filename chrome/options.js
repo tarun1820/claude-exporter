@@ -74,16 +74,26 @@ document.getElementById('backupBtn').addEventListener('click', () => {
   });
 });
 
-// Restore extension data from a backup file
+// Restore extension data from a backup file. Flow: click → mode-choice modal
+// → file picker → import. The mode is held in pendingImportMode across the
+// async file-picker boundary.
+let pendingImportMode = null;
+
 document.getElementById('restoreBtn').addEventListener('click', () => {
-  document.getElementById('restoreFile').click();
+  showImportModeModal((mode) => {
+    if (mode === null) return; // user cancelled the modal
+    pendingImportMode = mode;
+    document.getElementById('restoreFile').click();
+  });
 });
 
 document.getElementById('restoreFile').addEventListener('change', (event) => {
   const file = event.target.files[0];
   event.target.value = ''; // allow re-selecting the same file later
-  if (!file) return;
-  importBackup(file, (success, message) => {
+  const mode = pendingImportMode;
+  pendingImportMode = null; // consume; never reuse a stale mode
+  if (!file || !mode) return;
+  importBackup(file, mode, (success, message) => {
     showStatus('backupStatus', message, success ? 'success' : 'error');
   });
 });
