@@ -247,9 +247,17 @@ function extractArtifactsFromMessage(message) {
   // Check if message has content array (new format)
   if (message.content && Array.isArray(message.content)) {
     for (const content of message.content) {
-      // NEW FORMAT: tool_use with display_content
-      // Only the `artifacts` tool produces real artifacts — bash, web_search, repl, etc. are filtered out
-      if (content.type === 'tool_use' && content.name === 'artifacts' && content.display_content) {
+      // NEW FORMAT: tool_use with display_content.
+      // Allowlist real file/artifact producers:
+      //   - `artifacts` — legacy artifacts tool (still used when
+      //     `enabled_artifacts_attachments` is true)
+      //   - `create_file` — skills-runner MCP tool that replaced artifacts
+      //     when `enabled_artifacts_attachments` is false. Same json_block
+      //     display_content shape (language / code / filename).
+      // bash, web_search, repl, view, list_directory, etc. are filtered out.
+      if (content.type === 'tool_use' &&
+          (content.name === 'artifacts' || content.name === 'create_file') &&
+          content.display_content) {
         const displayContent = content.display_content;
 
         // Check for code_block format (newer artifact format)
