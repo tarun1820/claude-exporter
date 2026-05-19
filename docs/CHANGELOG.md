@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.10.11]
+
+- Browse table: checkbox column now `text-align: right` so the checkbox stays anchored to the right edge with consistent padding when the table grows on wider viewports (was `text-align: center`, which drifted the checkbox toward the middle of an expanding cell).
+- Browse table: column headers get `white-space: nowrap` and slightly more `padding-right` (25px) so the header text always stays on one line and never collides with the sort-direction arrow.
+
 ## [1.10.10]
 
 - Browse page `body { min-width: 1140px }` so the page itself never shrinks below the table's natural width. When the viewport is narrower, the page (not the table) scrolls horizontally — the table always displays all columns at full width, no clipping, no shrinking.
