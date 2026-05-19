@@ -48,9 +48,10 @@ let selectedConversations = new Set(); // Track selected conversation IDs
 let lastCheckedIndex = null; // Track last checked checkbox for shift+click range selection
 let exportTimestamps = {}; // Map conversation UUID to last export timestamp
 let modelSnapshots = {}; // Map conversation UUID to { firstSeen, current, ... } captured by content.js
-let statusFilter = 'all'; // 'all', 'new', 'exported'
+let statusFilter = 'all'; // 'all', 'new', 'exported', or 'projects' (search scope = project names)
 let dateFormat = 'mdy'; // 'mdy' or 'dmy'
 let timeFormat = '12h'; // '12h' or '24h'
+let modelDisplay = 'original'; // 'original' (first-seen) or 'current'
 
 // Export timestamp storage helpers
 async function loadExportTimestamps() {
@@ -74,19 +75,25 @@ async function loadModelSnapshots() {
   });
 }
 
-// Resolve which model to show for a conversation: the original (first-seen)
-// snapshot if we have one, otherwise the current/inferred model. Also reports
-// whether the chat has since been bounced to a different model.
+// Resolve which model to show for a conversation. Honors the modelDisplay
+// preference ('original' default, or 'current'). When the chat has been
+// bounced (current differs from first-seen), `bounced` is true and the
+// `*` marker shows the "other" model in its tooltip.
 function getDisplayModel(conv) {
   const snap = modelSnapshots[conv.uuid];
   if (snap && snap.firstSeen) {
+    const original = snap.firstSeen;
+    const current = snap.current || snap.firstSeen;
+    const bounced = !!snap.current && snap.current !== snap.firstSeen;
+    const useCurrent = modelDisplay === 'current';
     return {
-      model: snap.firstSeen,
-      current: snap.current || snap.firstSeen,
-      bounced: !!snap.current && snap.current !== snap.firstSeen
+      model: useCurrent ? current : original,
+      other: useCurrent ? original : current,
+      otherLabel: useCurrent ? 'Originally' : 'Currently',
+      bounced
     };
   }
-  return { model: conv.model, current: conv.model, bounced: false };
+  return { model: conv.model, other: conv.model, otherLabel: '', bounced: false };
 }
 
 async function saveExportTimestamp(conversationId) {
@@ -116,6 +123,15 @@ async function loadDateTimePrefs() {
   });
 }
 
+async function loadModelDisplayPref() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(['modelDisplay'], (result) => {
+      modelDisplay = result.modelDisplay === 'current' ? 'current' : 'original';
+      resolve();
+    });
+  });
+}
+
 function formatDate(dt) {
   const m = dt.getMonth() + 1;
   const d = dt.getDate();
@@ -136,20 +152,30 @@ function isNewOrUpdated(conv) {
   return new Date(conv.updated_at) > new Date(lastExport);
 }
 
+// When user navigates back to this page from the options page (bfcache hit),
+// reload so changed preferences (model display, date/time format, etc.) take
+// effect without a manual refresh.
+window.addEventListener('pageshow', (event) => {
+  if (event.persisted) window.location.reload();
+});
+
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', async () => {
   initTheme();
+  // Wire up UI listeners (settings dropdown, filters, search, etc.) immediately
+  // so the chrome stays interactive while orgId / conversations are still loading.
+  setupEventListeners();
   const loadingStart = Date.now();
   await loadOrgId();
   await loadExportTimestamps();
   await loadModelSnapshots();
   await loadDateTimePrefs();
+  await loadModelDisplayPref();
   const elapsed = Date.now() - loadingStart;
   if (elapsed < 1000) await new Promise(r => setTimeout(r, 1000 - elapsed));
   const loadingText = document.getElementById('loadingText');
   if (loadingText) loadingText.textContent = 'Loading conversations...';
   await loadConversations();
-  setupEventListeners();
 });
 
 // Load organization ID — auto-detect first, fall back to stored
@@ -173,7 +199,7 @@ async function loadOrgId() {
     chrome.storage.sync.get(['organizationId'], (result) => {
       orgId = result.organizationId;
       if (!orgId) {
-        showError('Organization ID not configured. Please open a Claude.ai tab and reload this page, or configure it manually in the extension options.');
+        showError('Organization ID not configured. Please open a claude.ai tab and reload this page, or configure it manually in the extension options.');
       }
       resolve();
     });
@@ -191,7 +217,7 @@ function sendMessageToClaudeTab(action, data) {
       }
 
       if (!tabs || tabs.length === 0) {
-        reject(new Error('Please open a Claude.ai tab first to use this feature'));
+        reject(new Error('Please open a claude.ai tab first to use this feature'));
         return;
       }
 
@@ -279,6 +305,13 @@ function applyFiltersAndSort() {
 
   // Filter conversations
   filteredConversations = allConversations.filter(conv => {
+    // 'projects' mode: search scope becomes the project name, status filters do not apply
+    if (statusFilter === 'projects') {
+      if (!searchTerm) return true;
+      const projectName = getProjectName(conv);
+      return projectName && projectName !== '-' && projectName.toLowerCase().includes(searchTerm);
+    }
+
     const matchesSearch = !searchTerm ||
       conv.name.toLowerCase().includes(searchTerm) ||
       (conv.summary && conv.summary.toLowerCase().includes(searchTerm));
@@ -441,17 +474,15 @@ function displayConversations() {
         <td class="date">${escapeHtml(updatedDate)}<br><span class="time">${escapeHtml(updatedTime)}</span></td>
         <td class="date">${escapeHtml(createdDate)}<br><span class="time">${escapeHtml(createdTime)}</span></td>
         <td>
-          <span class="model-badge ${modelBadgeClass}">
-            ${escapeHtml(formatModelName(modelInfo.model))}
-          </span>${modelInfo.bounced ? `<span class="model-bounced" title="Originally ${escapeHtml(formatModelName(modelInfo.model))}, now ${escapeHtml(formatModelName(modelInfo.current))}">→</span>` : ''}
+          ${modelInfo.bounced
+            ? `<span class="model-cell" title="${modelInfo.otherLabel} ${escapeHtml(formatModelName(modelInfo.other))}"><span class="model-badge ${modelBadgeClass}">${escapeHtml(formatModelName(modelInfo.model))}</span><span class="model-bounced ${modelBadgeClass}">*</span></span>`
+            : `<span class="model-badge ${modelBadgeClass}">${escapeHtml(formatModelName(modelInfo.model))}</span>`
+          }
         </td>
         <td>
           <div class="actions">
             <button class="btn-small btn-export" data-id="${escapeHtml(conv.uuid)}" data-name="${escapeHtml(conv.name)}">
               Export
-            </button>
-            <button class="btn-small btn-view" data-id="${escapeHtml(conv.uuid)}">
-              View
             </button>
           </div>
         </td>
@@ -478,14 +509,6 @@ function displayConversations() {
     });
   });
   
-  // Add view button listeners
-  document.querySelectorAll('.btn-view').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const conversationId = e.target.dataset.id;
-      window.open(`https://claude.ai/chat/${conversationId}`, '_blank');
-    });
-  });
-
   // Add checkbox listeners (use 'click' instead of 'change' to capture shift key)
   document.querySelectorAll('.conversation-checkbox').forEach(checkbox => {
     checkbox.addEventListener('click', handleCheckboxChange);
@@ -629,6 +652,9 @@ async function exportConversation(conversationId, conversationName) {
   const artifactFormat = document.getElementById('artifactFormat').value;
   const flattenArtifacts = document.getElementById('flattenArtifacts').checked;
 
+  // Tracked at function scope so the unified post-save toast can mention it
+  let artifactCount = 0;
+
   try {
     showToast(`Exporting ${conversationName}...`);
 
@@ -656,6 +682,7 @@ async function exportConversation(conversationId, conversationName) {
       const artifactFiles = extractArtifactFiles(data, artifactFormat);
 
       if (artifactFiles.length > 0) {
+        artifactCount = artifactFiles.length;
         // Create a ZIP with artifacts (and optionally conversation)
         const zip = new JSZip();
 
@@ -767,7 +794,9 @@ async function exportConversation(conversationId, conversationName) {
 
     // Record export timestamp and refresh display
     await saveExportTimestamp(conversationId);
-    showToast(`Exported: ${conversationName}`);
+    showToast(artifactCount > 0
+      ? `Exported: ${conversationName} with ${artifactCount} artifact(s)`
+      : `Exported: ${conversationName}`);
     displayConversations();
     updateStats();
 
@@ -1099,9 +1128,6 @@ function setupEventListeners() {
       // Update theme label
       const theme = document.documentElement.getAttribute('data-theme') || 'dark';
       document.getElementById('themeLabel').textContent = theme === 'dark' ? 'Dark' : 'Light';
-      // Update datetime format labels
-      document.getElementById('dateFormatLabel').textContent = dateFormat === 'mdy' ? 'M/D/Y' : 'D/M/Y';
-      document.getElementById('timeFormatLabel').textContent = timeFormat;
     }
   });
 
@@ -1135,10 +1161,14 @@ function setupEventListeners() {
     settingsDropdown.classList.remove('open');
   });
 
-  // Edit org ID — open options page
+  // Edit org ID — open options in the same tab so the back button returns here
   document.getElementById('editOrgId').addEventListener('click', () => {
-    chrome.runtime.openOptionsPage();
-    settingsDropdown.classList.remove('open');
+    window.location.href = chrome.runtime.getURL('options.html');
+  });
+
+  // Advanced Options — open options in the same tab so the back button returns here
+  document.getElementById('advancedOptions').addEventListener('click', () => {
+    window.location.href = chrome.runtime.getURL('options.html');
   });
 
   // Mark all as exported
@@ -1162,39 +1192,22 @@ function setupEventListeners() {
     showToast('All conversations marked as new');
   });
 
-  // Date format toggle
-  document.getElementById('toggleDateFormat').addEventListener('click', () => {
-    dateFormat = dateFormat === 'mdy' ? 'dmy' : 'mdy';
-    document.getElementById('dateFormatLabel').textContent = dateFormat === 'mdy' ? 'M/D/Y' : 'D/M/Y';
-    chrome.storage.local.set({ dateFormat });
-    displayConversations();
+  // Backup / Restore Database submenu — shared logic lives in utils.js
+  document.getElementById('backupData').addEventListener('click', () => {
+    backupExtensionData((success, message) => showToast(message, !success));
+    settingsDropdown.classList.remove('open');
   });
 
-  // Time format toggle
-  document.getElementById('toggleTimeFormat').addEventListener('click', () => {
-    timeFormat = timeFormat === '12h' ? '24h' : '12h';
-    document.getElementById('timeFormatLabel').textContent = timeFormat;
-    chrome.storage.local.set({ timeFormat });
-    displayConversations();
+  document.getElementById('restoreData').addEventListener('click', () => {
+    document.getElementById('restoreFileBrowse').click();
   });
 
-  // Test connection
-  document.getElementById('testConnection').addEventListener('click', async () => {
-    const statusEl = document.getElementById('connectionStatus');
-    statusEl.textContent = 'Testing...';
-    try {
-      const response = await sendMessageToClaudeTab('loadConversations', { orgId });
-      if (response && response.success) {
-        statusEl.textContent = `OK (${response.conversations.length})`;
-        statusEl.style.color = '#22c55e';
-      } else {
-        statusEl.textContent = 'Failed';
-        statusEl.style.color = '#ef4444';
-      }
-    } catch (e) {
-      statusEl.textContent = 'Error';
-      statusEl.style.color = '#ef4444';
-    }
+  document.getElementById('restoreFileBrowse').addEventListener('change', (event) => {
+    const file = event.target.files[0];
+    event.target.value = ''; // allow re-selecting the same file later
+    if (!file) return;
+    importBackup(file, (success, message) => showToast(message, !success));
+    settingsDropdown.classList.remove('open');
   });
 
   // Search input
@@ -1238,6 +1251,10 @@ function setupEventListeners() {
       // Update selected state
       document.querySelectorAll('.filter-option').forEach(o => o.classList.remove('selected'));
       option.classList.add('selected');
+      // Search bar placeholder reflects the active scope
+      document.getElementById('searchInput').placeholder = statusFilter === 'projects'
+        ? 'Search projects by name...'
+        : 'Search conversations by name...';
       // Update button state
       filterBtn.classList.toggle('active', statusFilter !== 'all');
       filterDropdown.classList.remove('open');

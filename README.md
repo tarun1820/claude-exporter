@@ -22,7 +22,7 @@ A browser extension for Chrome and Firefox that allows you to export your Claude
 ---
 ### Installation
 
-See [INSTALL.md](INSTALL.md) for installation instructions (browser stores, manual, and from source).
+See [docs/INSTALL.md](docs/INSTALL.md) for installation instructions (browser stores, manual, and from source).
 
 ---
 ### Usage
@@ -73,7 +73,7 @@ See [INSTALL.md](INSTALL.md) for installation instructions (browser stores, manu
 ### Troubleshooting
 
 #### "Organization ID not configured"
-- Follow the setup steps in [INSTALL.md](INSTALL.md#configuration)
+- Follow the setup steps in [docs/INSTALL.md](docs/INSTALL.md#configuration)
 - Make sure you're copying the complete UUID from the URL
 
 #### "Not authenticated" error
@@ -89,7 +89,7 @@ See [INSTALL.md](INSTALL.md) for installation instructions (browser stores, manu
 - Make sure you're using the latest version of the extension
 - Try reloading the extension from chrome://extensions/
 
-**For browser-specific troubleshooting issues**, see [INSTALL.md](./INSTALL.md#Troubleshooting)
+**For browser-specific troubleshooting issues**, see [docs/INSTALL.md](docs/INSTALL.md#Troubleshooting)
 
 ---
 ### Known Limitations

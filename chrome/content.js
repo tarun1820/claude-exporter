@@ -4,6 +4,9 @@ if (window.claudeExporterContentScriptLoaded) {
 } else {
   window.claudeExporterContentScriptLoaded = true;
 
+// Capture unhandled errors for diagnostics (sanitized, stored in chrome.storage.local)
+if (typeof initErrorCapture === 'function') initErrorCapture('content');
+
 // Note: Organization ID is now stored in extension settings
 // Users need to configure it in the extension options page
 

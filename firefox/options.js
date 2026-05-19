@@ -1,3 +1,6 @@
+// Capture unhandled errors for diagnostics (sanitized, stored in chrome.storage.local)
+if (typeof initErrorCapture === 'function') initErrorCapture('options');
+
 // Load saved settings
 document.addEventListener('DOMContentLoaded', () => {
   chrome.storage.sync.get(['organizationId'], (result) => {
@@ -53,7 +56,7 @@ document.getElementById('testBtn').addEventListener('click', async () => {
       const data = await response.json();
       showStatus('testStatus', `Success! Found ${data.length} conversations.`, 'success');
     } else if (response.status === 401) {
-      showStatus('testStatus', 'Not authenticated. Please make sure you are logged into Claude.ai', 'error');
+      showStatus('testStatus', 'Not authenticated. Please make sure you are logged into claude.ai', 'error');
     } else if (response.status === 403) {
       showStatus('testStatus', 'Access denied. The Organization ID might be incorrect.', 'error');
     } else {
@@ -62,6 +65,82 @@ document.getElementById('testBtn').addEventListener('click', async () => {
   } catch (error) {
     showStatus('testStatus', `Connection error: ${error.message}`, 'error');
   }
+});
+
+// Backup all extension data to a file (shared logic lives in utils.js)
+document.getElementById('backupBtn').addEventListener('click', () => {
+  backupExtensionData((success, message) => {
+    showStatus('backupStatus', message, success ? 'success' : 'error');
+  });
+});
+
+// Restore extension data from a backup file
+document.getElementById('restoreBtn').addEventListener('click', () => {
+  document.getElementById('restoreFile').click();
+});
+
+document.getElementById('restoreFile').addEventListener('change', (event) => {
+  const file = event.target.files[0];
+  event.target.value = ''; // allow re-selecting the same file later
+  if (!file) return;
+  importBackup(file, (success, message) => {
+    showStatus('backupStatus', message, success ? 'success' : 'error');
+  });
+});
+
+// Date & Time format preferences (displayed in the browse view)
+function loadDateTimeFormatPrefs() {
+  chrome.storage.local.get(['dateFormat', 'timeFormat'], (result) => {
+    document.getElementById('dateFormatSelect').value = result.dateFormat || 'mdy';
+    document.getElementById('timeFormatSelect').value = result.timeFormat || '12h';
+  });
+}
+loadDateTimeFormatPrefs();
+
+document.getElementById('dateFormatSelect').addEventListener('change', (e) => {
+  chrome.storage.local.set({ dateFormat: e.target.value }, () => {
+    showStatus('dateTimeStatus', 'Date format saved. Reload the browse page to see the change.', 'success');
+  });
+});
+
+document.getElementById('timeFormatSelect').addEventListener('change', (e) => {
+  chrome.storage.local.set({ timeFormat: e.target.value }, () => {
+    showStatus('dateTimeStatus', 'Time format saved. Reload the browse page to see the change.', 'success');
+  });
+});
+
+// Model display preference (browse view's Model column)
+function loadModelDisplayPref() {
+  chrome.storage.local.get(['modelDisplay'], (result) => {
+    const value = result.modelDisplay === 'current' ? 'current' : 'original';
+    const radio = document.querySelector(`input[name="modelDisplay"][value="${value}"]`);
+    if (radio) radio.checked = true;
+  });
+}
+loadModelDisplayPref();
+
+document.querySelectorAll('input[name="modelDisplay"]').forEach((radio) => {
+  radio.addEventListener('change', (e) => {
+    chrome.storage.local.set({ modelDisplay: e.target.value }, () => {
+      showStatus('modelDisplayStatus', 'Model display preference saved. Reload the browse page to see the change.', 'success');
+    });
+  });
+});
+
+// Contact & Diagnostics
+document.getElementById('emailDevLink').addEventListener('click', (e) => {
+  e.preventDefault();
+  const version = chrome.runtime.getManifest().version;
+  const subject = encodeURIComponent(`Claude Exporter Bug Report — v${version}`);
+  const body = encodeURIComponent('Describe the issue here. If this is a bug, please attach a diagnostics file generated from the Options page.\n\n');
+  window.location.href = `mailto:agoramachina@gmail.com?subject=${subject}&body=${body}`;
+});
+
+document.getElementById('generateDiagnosticsLink').addEventListener('click', (e) => {
+  e.preventDefault();
+  generateDiagnostics((success, message) => {
+    showStatus('contactStatus', message, success ? 'success' : 'error');
+  });
 });
 
 // Helper functions

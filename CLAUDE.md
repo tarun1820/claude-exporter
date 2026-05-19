@@ -49,8 +49,8 @@ Keep it concise. Don't duplicate what's already here — update existing section
 
 **After each commit**, update these files:
 
-- **`src/TODO.md`** — Move completed items to the Completed section, update the current version number, clean up any stale entries
-- **`src/CHANGELOG.md`** — Append a short entry under the current version. Create the file if it doesn't exist. Format: `## [X.Y.Z]` header, then bullet points describing changes. Keep entries concise — one line per change is fine
+- **`src/docs/TODO.md`** — Move completed items to the Completed section, update the current version number, clean up any stale entries
+- **`src/docs/CHANGELOG.md`** — Append a short entry under the current version. Create the file if it doesn't exist. Format: `## [X.Y.Z]` header, then bullet points describing changes. Keep entries concise — one line per change is fine
 - The CHANGELOG doubles as store update notes. All changes between the current version and the last `_Published_` marker are what goes into the store listing update
 
 ## Release Process
@@ -65,8 +65,8 @@ When the user asks to create a release for version X.Y.Z:
 4. **ZIP Firefox extension** — `cd src/firefox && zip -r ../../releases/vX.Y.Z/claude-exporter-firefox.zip ./*` (unsigned; user handles .xpi signing via AMO)
 5. **Git tag** — `cd src && git tag vX.Y.Z -m "Release vX.Y.Z"`
 6. **Push tag** — `git push origin vX.Y.Z`
-7. **Create GitHub release** — `gh release create vX.Y.Z ../releases/vX.Y.Z/* --title "vX.Y.Z" --notes "$(changelog excerpt from CHANGELOG.md)"` — use all changes since last `_Published_` marker as the notes
-8. **Mark as published** — Add `_Published_` line after the released version's entries in CHANGELOG.md, commit
+7. **Create GitHub release** — `gh release create vX.Y.Z ../releases/vX.Y.Z/* --title "vX.Y.Z" --notes "$(changelog excerpt from docs/CHANGELOG.md)"` — use all changes since last `_Published_` marker as the notes
+8. **Mark as published** — Add `_Published_` line after the released version's entries in docs/CHANGELOG.md, commit
 
 ## Critical Rules
 
@@ -89,15 +89,17 @@ Any export producing more than one file should always create a ZIP — never tri
 - `"Claude Exporter"` on the `main` branch (released version)
 - `"Claude Exporter Beta"` on the `testing` branch (so the user can tell at a glance which build is loaded)
 
+The popup header title is populated from `manifest.name` in `popup.js` (`#header-title`), so the popup automatically reads "Claude Exporter Beta" on the testing branch — no separate HTML edit needed.
+
 When merging `testing` → `main` for a release, flip both manifest names to drop "Beta" as part of the merge.
 
 ## Testing
 
-- **Vitest** lives in `src/`. Run tests with `npm test` (one-shot) or `npm run test:watch` (watch mode) from `src/`.
+- **Vitest** test harness (`package.json` + `node_modules/`) lives in `src/tests/`. Run tests with `npm test` (one-shot) or `npm run test:watch` (watch mode) from `src/tests/`.
 - Test files live in `src/tests/` and import from `src/chrome/utils.js` (the canonical copy).
 - `firefox/utils.js` is a mirror — if it drifts from `chrome/utils.js`, the tests won't catch it. Keep them in sync per the existing rule.
 - `utils.js` has a conditional `module.exports` block at the bottom that fires only when `module` is defined (Node/vitest). Browser extensions ignore it because the global is undefined.
-- `node_modules/` and `package-lock.json` live under `src/` and are gitignored / not part of the release ZIPs.
+- `node_modules/` and `package-lock.json` are gitignored (`package.json` is tracked under `src/tests/`). None are part of the release ZIPs.
 
 ## Architecture Notes
 

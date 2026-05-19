@@ -1,3 +1,6 @@
+// Capture unhandled errors for diagnostics (sanitized, stored in chrome.storage.local)
+if (typeof initErrorCapture === 'function') initErrorCapture('popup');
+
 // Get organization ID from storage (fallback)
 async function getStoredOrgId() {
   return new Promise((resolve) => {
@@ -34,17 +37,12 @@ async function getOrgId() {
   return getStoredOrgId();
 }
 
-// Check if org ID is configured on popup load
 document.addEventListener('DOMContentLoaded', async () => {
-  // Display version from manifest
+  // Pull the popup title + version from the manifest so the testing branch
+  // shows "Claude Exporter Beta" without a separate HTML edit.
   const manifest = chrome.runtime.getManifest();
+  document.getElementById('header-title').textContent = manifest.name;
   document.getElementById('header-version').textContent = `v${manifest.version}`;
-
-  // Try to detect org ID — show setup notice only if both auto-detect and stored fail
-  const orgId = await getOrgId();
-  if (!orgId) {
-    document.getElementById('setupNotice').style.display = 'block';
-  }
 
   // Handle checkbox dependencies
   const includeChatsCheckbox = document.getElementById('includeChats');
@@ -72,12 +70,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   updateCheckboxStates(); // Initialize on load
 });
 
-// Handle options link click
-document.getElementById('openOptions').addEventListener('click', (e) => {
-  e.preventDefault();
-  chrome.runtime.openOptionsPage();
-});
-  
   // Get current conversation ID from URL
   async function getCurrentConversationId() {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -91,8 +83,16 @@ document.getElementById('openOptions').addEventListener('click', (e) => {
     const statusEl = document.getElementById('status');
     statusEl.className = `status ${type}`;
 
-    // Check for 403 errors and add org ID hint with options link
-    if (type === 'error' && (message.includes('403') || message.includes('404'))) {
+    // Swap "Options" for a clickable link when the message points users to the options page
+    if (type === 'error' && message.includes('Please set this value in Options.')) {
+      const linked = message.replace('Options.', '<a href="#" id="statusOpenOptions">Options</a>.');
+      statusEl.innerHTML = linked;
+      document.getElementById('statusOpenOptions').addEventListener('click', (e) => {
+        e.preventDefault();
+        chrome.runtime.openOptionsPage();
+      });
+    } else if (type === 'error' && (message.includes('403') || message.includes('404'))) {
+      // Legacy 403/404 hint
       statusEl.innerHTML = `${message}<br>Is your <a href="#" id="statusOpenOptions">Organization ID</a> correct?`;
       document.getElementById('statusOpenOptions').addEventListener('click', (e) => {
         e.preventDefault();
@@ -121,17 +121,17 @@ document.getElementById('exportCurrent').addEventListener('click', async () => {
     const conversationId = await getCurrentConversationId();
     
     if (!orgId) {
-      throw new Error('Organization ID not configured. Click the setup link above to configure it.');
+      throw new Error('Failed to obtain organization ID: Please set this value in Options.');
     }
     if (!conversationId) {
-      throw new Error('Could not detect conversation ID. Make sure you are on a Claude.ai conversation page.');
+      throw new Error('Could not detect conversation ID. Make sure you are on a claude.ai conversation page.');
     }
     
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     
-    // Check if we're on Claude.ai
+    // Check if we're on claude.ai
     if (!tab.url.includes('claude.ai')) {
-      throw new Error('Please navigate to a Claude.ai conversation page first.');
+      throw new Error('Please navigate to a claude.ai conversation page first.');
     }
       
           chrome.tabs.sendMessage(tab.id, {
@@ -184,7 +184,7 @@ document.getElementById('exportCurrent').addEventListener('click', async () => {
       const orgId = await getOrgId();
       
           if (!orgId) {
-      throw new Error('Organization ID not configured. Click the setup link above to configure it.');
+      throw new Error('Failed to obtain organization ID: Please set this value in Options.');
       }
       
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });

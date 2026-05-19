@@ -114,6 +114,59 @@ describe('extractArtifactsFromMessage — tool name filter', () => {
     };
     expect(extractArtifactsFromMessage(message)).toEqual([]);
   });
+
+  // Regression: when `enabled_artifacts_attachments` is false in conversation
+  // settings, Claude uses the skills-runner `create_file` MCP tool instead of
+  // the legacy `artifacts` tool. display_content shape is identical
+  // (json_block with language / code / filename). The extractor must allowlist
+  // both tool names.
+  it('extracts a create_file tool_use (skills-runner replacement for artifacts)', () => {
+    const message = {
+      content: [
+        {
+          type: 'tool_use',
+          name: 'create_file',
+          input: {
+            path: '/mnt/user-data/outputs/hello.md',
+            file_text: '# Hello, world!\n',
+          },
+          display_content: {
+            type: 'json_block',
+            json_block: JSON.stringify({
+              language: 'markdown',
+              code: '# Hello, world!\n',
+              filename: '/mnt/user-data/outputs/hello.md',
+            }),
+          },
+        },
+      ],
+    };
+    const artifacts = extractArtifactsFromMessage(message);
+    expect(artifacts).toHaveLength(1);
+    expect(artifacts[0].title).toBe('hello');
+    expect(artifacts[0].language).toBe('markdown');
+    expect(artifacts[0].content).toBe('# Hello, world!');
+  });
+
+  it('still rejects other skills tools that share json_block display (e.g. view, list_directory)', () => {
+    const message = {
+      content: [
+        {
+          type: 'tool_use',
+          name: 'view',
+          display_content: {
+            type: 'json_block',
+            json_block: JSON.stringify({
+              language: 'text',
+              code: 'directory listing here',
+              filename: '/mnt/skills/public',
+            }),
+          },
+        },
+      ],
+    };
+    expect(extractArtifactsFromMessage(message)).toEqual([]);
+  });
 });
 
 describe('extractArtifactFiles — end-to-end', () => {

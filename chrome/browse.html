@@ -107,6 +107,11 @@
       background: var(--bg-body);
       color: var(--text-primary);
       line-height: 1.6;
+      /* Keep the table fully visible at all times. When the viewport is
+         narrower than this, the PAGE scrolls horizontally instead of the
+         table shrinking or being clipped. 1140 = 1100 (table min-width)
+         + 2 * 20px (.container horizontal padding). */
+      min-width: 1140px;
     }
     
     .header {
@@ -215,9 +220,32 @@
       background: var(--border-color);
       margin: 4px 0;
     }
+
+    .settings-item-has-submenu {
+      position: relative;
+    }
+
+    .settings-submenu {
+      display: none;
+      position: absolute;
+      top: -1px;
+      left: 100%;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      box-shadow: 0 4px 16px var(--shadow-md);
+      min-width: 140px;
+      z-index: 1001;
+      padding: 4px 0;
+    }
+
+    .settings-item-has-submenu:hover .settings-submenu {
+      display: block;
+    }
     
     .controls {
       display: flex;
+      flex-wrap: wrap;
       gap: 15px;
       align-items: center;
       justify-content: space-between;
@@ -325,6 +353,7 @@
 
     table {
       width: 100%;
+      min-width: 1100px;
       border-collapse: collapse;
     }
 
@@ -335,6 +364,7 @@
 
     th {
       padding: 15px;
+      padding-right: 25px;
       text-align: left;
       font-weight: 600;
       color: var(--text-secondary);
@@ -344,6 +374,7 @@
       cursor: pointer;
       user-select: none;
       position: relative;
+      white-space: nowrap;
     }
 
     th.sortable:hover {
@@ -398,7 +429,7 @@
     }
     
     td {
-      padding: 15px;
+      padding: 15px 20px;
       font-size: 14px;
     }
     
@@ -512,6 +543,12 @@
       font-weight: 600;
     }
 
+    .filter-divider {
+      height: 1px;
+      background: var(--border-color);
+      margin: 4px 0;
+    }
+
     .date {
       color: var(--text-secondary);
       white-space: nowrap;
@@ -549,7 +586,15 @@
       margin-left: 4px;
       font-size: 12px;
       color: var(--badge-default);
-      opacity: 0.7;
+    }
+
+    .model-bounced.sonnet { color: var(--badge-sonnet); }
+    .model-bounced.haiku  { color: var(--badge-haiku); }
+    .model-bounced.opus   { color: var(--badge-opus); }
+
+    /* Wrapper that carries the tooltip + cursor so hover works on the badge or asterisk */
+    .model-cell {
+      display: inline-block;
       cursor: help;
     }
 
@@ -560,8 +605,8 @@
 
     .checkbox-col {
       width: 50px;
-      text-align: center;
-      padding: 15px 10px !important;
+      text-align: right;
+      padding: 15px 25px !important;
       vertical-align: middle;
     }
 
@@ -590,16 +635,6 @@
 
     .btn-export:hover {
       background: var(--primary-hover);
-    }
-
-    .btn-view {
-      background: var(--secondary-bg);
-      color: var(--text-primary);
-    }
-
-    .btn-view:hover {
-      background: var(--hover-bg);
-      filter: brightness(0.95);
     }
 
     .btn-small:disabled {
@@ -734,19 +769,24 @@
               <span class="settings-value">&#8594;</span>
             </div>
             <div class="settings-divider"></div>
-            <div class="settings-item" id="toggleDateFormat">
-              <span class="settings-label">Date</span>
-              <span class="settings-value" id="dateFormatLabel">M/D/Y</span>
-            </div>
-            <div class="settings-item" id="toggleTimeFormat">
-              <span class="settings-label">Time</span>
-              <span class="settings-value" id="timeFormatLabel">12h</span>
+            <div class="settings-item settings-item-has-submenu" id="backupRestore">
+              <span class="settings-label">Backup/Restore Database</span>
+              <span class="settings-value">&#8594;</span>
+              <div class="settings-submenu">
+                <div class="settings-item" id="backupData">
+                  <span class="settings-label">Export Backup</span>
+                </div>
+                <div class="settings-item" id="restoreData">
+                  <span class="settings-label">Import Backup</span>
+                </div>
+              </div>
             </div>
             <div class="settings-divider"></div>
-            <div class="settings-item" id="testConnection">
-              <span class="settings-label">Test connection</span>
-              <span class="settings-value" id="connectionStatus"></span>
+            <div class="settings-item" id="advancedOptions">
+              <span class="settings-label">Advanced Options</span>
+              <span class="settings-value">&#8594;</span>
             </div>
+            <input type="file" id="restoreFileBrowse" accept="application/json,.json" style="display: none;">
           </div>
         </div>
         <h1>Browse Claude Conversations</h1>
@@ -775,6 +815,8 @@
             <div class="filter-option" data-value="all">All conversations</div>
             <div class="filter-option" data-value="new">New / Updated</div>
             <div class="filter-option" data-value="exported">Previously exported</div>
+            <div class="filter-divider"></div>
+            <div class="filter-option" data-value="projects">Search projects</div>
           </div>
         </div>
       </div>
@@ -885,11 +927,13 @@
     }
     .export-controls-wrapper {
       display: flex;
+      flex-wrap: wrap;
       align-items: center;
       gap: 15px;
     }
     .export-settings {
       display: inline-flex;
+      flex-wrap: wrap;
       gap: 15px;
       align-items: center;
       padding: 8px 15px;
@@ -898,11 +942,13 @@
     }
     .export-row {
       display: flex;
+      flex-wrap: wrap;
       gap: 20px;
       align-items: center;
     }
     .export-section {
       display: flex;
+      flex-wrap: wrap;
       gap: 15px;
       align-items: center;
     }
