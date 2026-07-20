@@ -688,10 +688,12 @@ function getModelBadgeClass(model) {
 function backupExtensionData(onComplete) {
   chrome.storage.local.get(null, (local) => {
     chrome.storage.sync.get(null, (sync) => {
-      // Never persist the user's Anthropic API key in a backup file — it's a
-      // secret, not app state, and backups are meant to be shareable/archivable.
+      // Never persist the user's BYOK API keys in a backup file — they're
+      // secrets, not app state, and backups are meant to be shareable/archivable.
       const localCopy = { ...(local || {}) };
-      delete localCopy.bridgeApiKey;
+      delete localCopy.bridgeApiKeyAnthropic;
+      delete localCopy.bridgeApiKeyOpenAI;
+      delete localCopy.bridgeApiKeyGemini;
       const backup = {
         _meta: {
           app: 'claude-exporter',
@@ -1167,13 +1169,97 @@ function extractBridgeContext(data, mode = 'coding') {
   };
 }
 
+// Supported AI providers for Tier 2 refinement, each BYOK — the user's own
+// key for whichever provider they pick, never transmitted anywhere but that
+// provider's own API host. Default models are a best-effort pick as of this
+// writing; providers retire/rename models over time, so these may need a
+// quick bump later the same way the original Anthropic default did.
+const CE_PROVIDER_DEFAULTS = {
+  anthropic: { model: 'claude-haiku-4-5-20251001' },
+  openai: { model: 'gpt-4o-mini' },
+  gemini: { model: 'gemini-2.0-flash' },
+};
+
+// Build the fetch(url, options) pair for one provider's chat/generation
+// endpoint. Each provider has its own auth scheme (header vs query param)
+// and request shape, but all three take the same systemPrompt/userPrompt.
+function ceBuildProviderRequest(provider, apiKey, model, systemPrompt, userPrompt) {
+  if (provider === 'openai') {
+    return {
+      url: 'https://api.openai.com/v1/chat/completions',
+      options: {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt },
+          ],
+        }),
+      },
+    };
+  }
+
+  if (provider === 'gemini') {
+    return {
+      url: `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`,
+      options: {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }],
+        }),
+      },
+    };
+  }
+
+  // Default: Anthropic
+  return {
+    url: 'https://api.anthropic.com/v1/messages',
+    options: {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: 4096,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }],
+      }),
+    },
+  };
+}
+
+// Pull the generated text out of each provider's differently-shaped response.
+function ceExtractProviderText(provider, result) {
+  if (provider === 'openai') {
+    return result.choices && result.choices[0] && result.choices[0].message && result.choices[0].message.content;
+  }
+  if (provider === 'gemini') {
+    const candidate = result.candidates && result.candidates[0];
+    const part = candidate && candidate.content && candidate.content.parts && candidate.content.parts[0];
+    return part && part.text;
+  }
+  const textBlock = (result.content || []).find(b => b.type === 'text');
+  return textBlock && textBlock.text;
+}
+
 // Tier 2: async, network. Sends the Tier-1 pass plus condensed branch text to
-// Anthropic's Messages API and asks the model to return a refined JSON object
-// in the same shape. Must be called from an extension page context (not a
-// claude.ai content script — the page's CSP would block the cross-origin
-// call). apiKey is the user's own BYOK Anthropic key, never transmitted
-// anywhere but api.anthropic.com.
-async function refineBridgeContextWithAI(bridgeContext, rawBranchText, apiKey, mode = 'coding', model = 'claude-haiku-4-5-20251001') {
+// the user's chosen AI provider (Anthropic, OpenAI, or Gemini — BYOK) and
+// asks it to return a refined JSON object in the same shape. Must be called
+// from an extension page context (not a claude.ai content script — the
+// page's CSP would block the cross-origin call).
+async function refineBridgeContextWithAI(bridgeContext, rawBranchText, { provider = 'anthropic', apiKey, model } = {}, mode = 'coding') {
+  const resolvedModel = model || (CE_PROVIDER_DEFAULTS[provider] || CE_PROVIDER_DEFAULTS.anthropic).model;
+
   const MAX_BRANCH_CHARS = 12000;
   const condensed = rawBranchText.length > MAX_BRANCH_CHARS
     ? rawBranchText.slice(0, MAX_BRANCH_CHARS) + '\n…(truncated)'
@@ -1199,37 +1285,24 @@ async function refineBridgeContextWithAI(bridgeContext, rawBranchText, apiKey, m
     preferences: bridgeContext.preferences,
   }, null, 2)}\n\nHere is the conversation transcript to refine it against:\n${condensed}\n\nReturn the refined JSON object only.`;
 
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: 4096,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: userPrompt }],
-    }),
-  });
+  const { url, options } = ceBuildProviderRequest(provider, apiKey, resolvedModel, systemPrompt, userPrompt);
+  const response = await fetch(url, options);
 
   if (!response.ok) {
     const errBody = await response.text().catch(() => '');
-    throw new Error(`Anthropic API request failed: ${response.status} ${errBody}`.trim());
+    throw new Error(`${provider} API request failed: ${response.status} ${errBody}`.trim());
   }
 
   const result = await response.json();
-  const textBlock = (result.content || []).find(b => b.type === 'text');
-  if (!textBlock || !textBlock.text) {
-    throw new Error('Anthropic API returned no text content to parse.');
+  const text = ceExtractProviderText(provider, result);
+  if (!text) {
+    throw new Error(`${provider} API returned no text content to parse.`);
   }
 
   let refined;
   try {
-    const jsonMatch = textBlock.text.match(/\{[\s\S]*\}/);
-    refined = JSON.parse(jsonMatch ? jsonMatch[0] : textBlock.text);
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    refined = JSON.parse(jsonMatch ? jsonMatch[0] : text);
   } catch (e) {
     throw new Error('Failed to parse the AI-refined bridge context as JSON.');
   }

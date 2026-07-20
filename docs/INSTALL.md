@@ -79,10 +79,10 @@ After installing the extension:
 The Bridge's rule-based extraction works with no setup. To enable AI-enhanced extraction:
 
 1. Open the extension options page
-2. Under **AI Conversation Bridge**, paste your Anthropic API key
+2. Under **AI Conversation Bridge**, pick your provider (Anthropic, OpenAI, or Google Gemini) and paste the matching API key
 3. Click **Save Bridge Settings**
 
-The key is stored only in this browser (never synced), sent only to `api.anthropic.com`, and only used when you explicitly toggle "AI-enhanced extraction" on in the Bridge page. It's excluded from backup and diagnostics exports.
+Each key is stored only in this browser (never synced), sent only to that provider's own API, and only used when you explicitly toggle "AI-enhanced extraction" on in the Bridge page. All keys are excluded from backup and diagnostics exports.
 
 ---
 

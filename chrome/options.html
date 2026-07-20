@@ -281,9 +281,19 @@
 
   <div class="section">
     <h3>AI Conversation Bridge</h3>
-    <p>Optional: add your own Anthropic API key to enable AI-enhanced context extraction when bridging a conversation to another LLM. The key is stored only in this browser, sent only to <code>api.anthropic.com</code>, and only used when you explicitly enable "AI-enhanced extraction" on the Bridge page — never automatically. It is excluded from backup and diagnostics exports.</p>
-    <label for="bridgeApiKey">Anthropic API key</label>
-    <input type="text" id="bridgeApiKey" placeholder="sk-ant-...">
+    <p>Optional: bring your own API key for Anthropic, OpenAI, or Google Gemini to enable AI-enhanced context extraction when bridging a conversation to another LLM. Pick which provider to use below — only that provider's key is ever read or sent, only to that provider's own API, and only when you explicitly enable "AI-enhanced extraction" on the Bridge page (never automatically). All keys are excluded from backup and diagnostics exports.</p>
+    <label for="bridgeProvider">AI Provider</label>
+    <select id="bridgeProvider">
+      <option value="anthropic">Anthropic (Claude)</option>
+      <option value="openai">OpenAI</option>
+      <option value="gemini">Google Gemini</option>
+    </select>
+    <label for="bridgeApiKeyAnthropic" style="margin-top: 12px;">Anthropic API key</label>
+    <input type="text" id="bridgeApiKeyAnthropic" placeholder="sk-ant-...">
+    <label for="bridgeApiKeyOpenAI" style="margin-top: 12px;">OpenAI API key</label>
+    <input type="text" id="bridgeApiKeyOpenAI" placeholder="sk-...">
+    <label for="bridgeApiKeyGemini" style="margin-top: 12px;">Google Gemini API key</label>
+    <input type="text" id="bridgeApiKeyGemini" placeholder="AIza...">
     <label for="bridgeDefaultMode" style="margin-top: 12px;">Default transfer mode</label>
     <select id="bridgeDefaultMode">
       <option value="coding">Coding</option>
@@ -293,7 +303,7 @@
     </select>
     <div class="button-row">
       <button id="saveBridgeBtn">Save Bridge Settings</button>
-      <button id="clearBridgeKeyBtn" class="secondary">Clear API Key</button>
+      <button id="clearBridgeKeyBtn" class="secondary">Clear Current Provider's Key</button>
     </div>
     <div id="bridgeStatus" class="status"></div>
   </div>

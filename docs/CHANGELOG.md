@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.13.0]
+
+- **AI Conversation Bridge now supports OpenAI and Google Gemini, not just Anthropic.** Options gained an "AI Provider" selector plus a separate API key field per provider — pick whichever provider you have a key for, and only that provider's key is ever read or sent (to that provider's own API, only when you explicitly enable AI-enhanced extraction).
+  - Added `https://api.openai.com/*` and `https://generativelanguage.googleapis.com/*` to host permissions.
+  - Backup export redaction updated to exclude all three provider key fields.
+- Added a credit line for "Prompt & Pray" to README's Acknowledgments.
+
 ## [1.12.1]
 
 - **Unified visual design across Popup, Browse, Bridge, and Options.** The four pages had drifted into separate CSS variable naming schemes, three different "brand purple" values, and inconsistent button/input/status styling. All four now share one canonical token set, one brand purple, one button/form/status spec, and bordered-card sections.

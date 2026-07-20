@@ -13,6 +13,14 @@ const SECTION_TITLES = {
   preferences: 'User Preferences',
 };
 
+// Provider-specific storage key + display info for the AI-enhanced pass —
+// mirrors the same mapping used in options.js.
+const PROVIDER_INFO = {
+  anthropic: { keyField: 'bridgeApiKeyAnthropic', label: 'Anthropic', host: 'api.anthropic.com' },
+  openai: { keyField: 'bridgeApiKeyOpenAI', label: 'OpenAI', host: 'api.openai.com' },
+  gemini: { keyField: 'bridgeApiKeyGemini', label: 'Google Gemini', host: 'generativelanguage.googleapis.com' },
+};
+
 let bridgeContext = null;
 let rawBranchText = '';
 let apiKeyConfigured = false;
@@ -116,18 +124,20 @@ async function runExtraction(mode) {
 
 async function checkApiKey() {
   return new Promise((resolve) => {
-    chrome.storage.local.get(['bridgeApiKey'], (result) => {
-      apiKeyConfigured = !!result.bridgeApiKey;
+    chrome.storage.local.get(['bridgeProvider', 'bridgeApiKeyAnthropic', 'bridgeApiKeyOpenAI', 'bridgeApiKeyGemini'], (result) => {
+      const provider = result.bridgeProvider || 'anthropic';
+      const info = PROVIDER_INFO[provider] || PROVIDER_INFO.anthropic;
+      apiKeyConfigured = !!result[info.keyField];
       const wrap = document.getElementById('aiToggleWrap');
       const checkbox = document.getElementById('aiEnhanced');
       if (!apiKeyConfigured) {
         wrap.classList.add('disabled');
         checkbox.disabled = true;
-        wrap.title = 'Set an Anthropic API key in Options to enable AI-enhanced extraction.';
+        wrap.title = `Set a ${info.label} API key in Options to enable AI-enhanced extraction.`;
       } else {
         wrap.classList.remove('disabled');
         checkbox.disabled = false;
-        wrap.title = 'Refine the extraction using your Anthropic API key.';
+        wrap.title = `Refine the extraction using your ${info.label} API key.`;
       }
       resolve();
     });
@@ -136,14 +146,18 @@ async function checkApiKey() {
 
 async function runAiRefine() {
   if (!apiKeyConfigured) return;
-  const apiKey = await new Promise((resolve) => {
-    chrome.storage.local.get(['bridgeApiKey'], (r) => resolve(r.bridgeApiKey));
+  const { provider, apiKey } = await new Promise((resolve) => {
+    chrome.storage.local.get(['bridgeProvider', 'bridgeApiKeyAnthropic', 'bridgeApiKeyOpenAI', 'bridgeApiKeyGemini'], (r) => {
+      const p = r.bridgeProvider || 'anthropic';
+      resolve({ provider: p, apiKey: r[PROVIDER_INFO[p].keyField] });
+    });
   });
   const mode = document.getElementById('mode').value;
   syncEditsFromUI();
-  showStatus('Refining with AI (this calls api.anthropic.com with your key)…', 'info');
+  const info = PROVIDER_INFO[provider] || PROVIDER_INFO.anthropic;
+  showStatus(`Refining with AI (this calls ${info.host} with your key)…`, 'info');
   try {
-    bridgeContext = await refineBridgeContextWithAI(bridgeContext, rawBranchText, apiKey, mode);
+    bridgeContext = await refineBridgeContextWithAI(bridgeContext, rawBranchText, { provider, apiKey }, mode);
     renderSections();
     showStatus('AI-refined context ready. Review and edit below before exporting.', 'success');
   } catch (error) {

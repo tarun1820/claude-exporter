@@ -157,6 +157,15 @@
 
 ## Completed ✅
 
+- **Multi-provider AI Conversation Bridge (BYOK) + credit line** (v1.13.0)
+  - `refineBridgeContextWithAI` in `chrome/utils.js` now dispatches to Anthropic, OpenAI, or Google Gemini based on a `provider` param, instead of being hardcoded to Anthropic's Messages API
+  - Options page gained an "AI Provider" selector plus one API key field per provider (`bridgeApiKeyAnthropic`/`bridgeApiKeyOpenAI`/`bridgeApiKeyGemini`), so switching providers doesn't discard previously-entered keys
+  - `backupExtensionData`'s redaction updated to strip all three new key fields (was only stripping the old single `bridgeApiKey`)
+  - Added `https://api.openai.com/*` and `https://generativelanguage.googleapis.com/*` to `host_permissions`
+  - Default models are a best-effort pick (`gpt-4o-mini` for OpenAI, `gemini-2.0-flash` for Gemini) — same caveat as the pre-existing Anthropic default, may need bumping as providers update their lineups
+  - README Acknowledgments now credits "Prompt & Pray"
+  - Note: an icon replacement was requested alongside this but dropped — the image posted in chat could not be retrieved as an actual file by any available tool; can be revisited if the file is provided some other way (e.g. a URL, or committed directly to the repo)
+
 - **Unified visual design across Popup, Browse, Bridge, Options** (v1.12.1)
   - One canonical set of CSS variable names (`--bg-body`, `--bg-card`, `--text-primary`, etc.) across all four pages, replacing four drifted naming schemes
   - One canonical brand purple (`#5d44e8`/`#6b52e8`) — options.html's stray `#5436DA` corrected to match the other three pages
