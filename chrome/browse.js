@@ -481,10 +481,10 @@ function displayConversations() {
         </td>
         <td>
           <div class="actions">
-            <button class="btn-small btn-export" data-id="${escapeHtml(conv.uuid)}" data-name="${escapeHtml(conv.name)}">
+            <button class="btn-small btn-export" data-id="${escapeHtml(conv.uuid)}" data-name="${escapeHtml(conv.name)}" data-org="${escapeHtml(conv._orgId || '')}">
               Export
             </button>
-            <button class="btn-small btn-bridge" data-id="${escapeHtml(conv.uuid)}" title="Bridge this conversation to another AI">
+            <button class="btn-small btn-bridge" data-id="${escapeHtml(conv.uuid)}" data-org="${escapeHtml(conv._orgId || '')}" title="Bridge this conversation to another AI">
               Bridge
             </button>
           </div>
@@ -508,14 +508,15 @@ function displayConversations() {
   // Add export button listeners
   document.querySelectorAll('.btn-export').forEach(btn => {
     btn.addEventListener('click', (e) => {
-      exportConversation(e.target.dataset.id, e.target.dataset.name);
+      exportConversation(e.target.dataset.id, e.target.dataset.name, e.target.dataset.org || orgId);
     });
   });
 
   // Add bridge button listeners
   document.querySelectorAll('.btn-bridge').forEach(btn => {
     btn.addEventListener('click', (e) => {
-      const url = chrome.runtime.getURL(`bridge.html?orgId=${encodeURIComponent(orgId)}&conversationId=${encodeURIComponent(e.target.dataset.id)}`);
+      const rowOrgId = e.target.dataset.org || orgId;
+      const url = chrome.runtime.getURL(`bridge.html?orgId=${encodeURIComponent(rowOrgId)}&conversationId=${encodeURIComponent(e.target.dataset.id)}`);
       chrome.tabs.create({ url });
     });
   });
@@ -654,7 +655,7 @@ function autoSelectNewUpdated() {
 }
 
 // Export single conversation
-async function exportConversation(conversationId, conversationName) {
+async function exportConversation(conversationId, conversationName, conversationOrgId) {
   const format = document.getElementById('exportFormat').value;
   const includeChats = document.getElementById('includeChats').checked;
   const includeThinking = document.getElementById('includeThinking').checked;
@@ -670,8 +671,9 @@ async function exportConversation(conversationId, conversationName) {
   try {
     showToast(`Exporting ${conversationName}...`);
 
+    const targetOrgId = conversationOrgId || orgId;
     const response = await fetch(
-      `https://claude.ai/api/organizations/${orgId}/chat_conversations/${conversationId}?tree=True&rendering_mode=messages&render_all_tools=true`,
+      `https://claude.ai/api/organizations/${targetOrgId}/chat_conversations/${conversationId}?tree=True&rendering_mode=messages&render_all_tools=true`,
       {
         credentials: 'include',
         headers: {
@@ -860,7 +862,7 @@ async function exportAllFiltered() {
     progressBar.style.width = '0%';
     progressStats.textContent = '';
     try {
-      await exportConversation(conv.uuid, conv.name);
+      await exportConversation(conv.uuid, conv.name, conv._orgId || orgId);
       progressBar.style.width = '100%';
     } finally {
       progressModal.style.display = 'none';
@@ -907,7 +909,7 @@ async function exportAllFiltered() {
       const promises = batch.map(async (conv) => {
         try {
           const response = await fetch(
-            `https://claude.ai/api/organizations/${orgId}/chat_conversations/${conv.uuid}?tree=True&rendering_mode=messages&render_all_tools=true`,
+            `https://claude.ai/api/organizations/${conv._orgId || orgId}/chat_conversations/${conv.uuid}?tree=True&rendering_mode=messages&render_all_tools=true`,
             {
               credentials: 'include',
               headers: {
@@ -1146,7 +1148,7 @@ async function bridgeFiltered() {
     for (const conv of conversations) {
       progressText.textContent = `Extracting bridge context: ${conv.name}...`;
       const response = await fetch(
-        `https://claude.ai/api/organizations/${orgId}/chat_conversations/${conv.uuid}?tree=True&rendering_mode=messages&render_all_tools=true`,
+        `https://claude.ai/api/organizations/${conv._orgId || orgId}/chat_conversations/${conv.uuid}?tree=True&rendering_mode=messages&render_all_tools=true`,
         { credentials: 'include', headers: { 'Accept': 'application/json' } }
       );
       if (response.ok) {

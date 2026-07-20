@@ -10,6 +10,16 @@ async function getStoredOrgId() {
   });
 }
 
+// When a fetch fell back to a different organization than the one we sent
+// (multi-org accounts — see fetchConversationAnyOrg in content.js), persist
+// the working org so the next action starts there instead of refalling back,
+// and let the caller show a one-line status note about the switch.
+function persistResolvedOrgId(sentOrgId, resolvedOrgId) {
+  if (!resolvedOrgId || resolvedOrgId === sentOrgId) return null;
+  chrome.storage.sync.set({ organizationId: resolvedOrgId });
+  return 'Switched to a different organization for this conversation.';
+}
+
 // Auto-detect organization ID via content script, fall back to stored
 async function getOrgId() {
   try {
@@ -155,7 +165,8 @@ document.getElementById('exportCurrent').addEventListener('click', async () => {
       }
       
       if (response?.success) {
-        showStatus('Conversation exported successfully!', 'success');
+        const switchNote = persistResolvedOrgId(orgId, response.resolvedOrgId);
+        showStatus(switchNote ? `Conversation exported successfully! ${switchNote}` : 'Conversation exported successfully!', 'success');
       } else {
         const errorMsg = response?.error || 'Export failed';
         console.error('Export failed:', errorMsg, response?.details);

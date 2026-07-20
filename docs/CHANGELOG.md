@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.12.0]
+
+- **Fixed: multi-organization accounts only ever saw one org's conversations, and 404s on export/bridge.** If your Claude.ai account belongs to more than one organization (e.g. a personal account plus a Team workspace), the extension previously auto-detected and locked onto whichever org the API listed first — silently truncating "Browse"/"Export All" to that org's conversations only (often exactly the 14-conversation default page), and 404ing with "Is your Organization ID correct?" whenever you tried to export/bridge a conversation that actually belonged to a different org.
+  - `fetchAllConversations` now paginates (`limit`/`offset`) instead of fetching a single unparameterized page, with a safety guard so it can't loop forever or regress below today's behavior if the API ignores the params.
+  - Browse/Export All now aggregate conversations (and projects) across **every** chat-capable organization on the account, tagging each with the org it came from, instead of just the first one auto-detect happens to pick.
+  - Exporting or bridging a single conversation now tries the configured org first, then automatically falls back through your other organizations on a 404 — no more manual org-ID guessing. Whichever org actually works is remembered for next time, with a status message noting the switch.
+
 ## [1.11.1]
 
 - **Repo is now Chrome-only** — removed the `firefox/` folder and all Firefox-specific docs/CI references. `chrome/` is the only extension build going forward; CLAUDE.md, README.md, and docs/INSTALL.md updated accordingly.

@@ -187,6 +187,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       window.__ceRawConversation = response.data;
       rawBranchText = getBranchText(response.data);
       await runExtraction(document.getElementById('mode').value);
+
+      // Multi-org accounts: the conversation may have been found under a
+      // different org than the one we sent (see fetchConversationAnyOrg in
+      // content.js). Remember the working org for next time.
+      if (response.resolvedOrgId && response.resolvedOrgId !== orgId) {
+        chrome.storage.sync.set({ organizationId: response.resolvedOrgId });
+        showStatus('Context extracted (switched to a different organization for this conversation). Review and edit below before exporting.', 'success');
+      }
     }
   } catch (error) {
     console.error('Bridge init failed:', error);

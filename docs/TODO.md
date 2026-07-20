@@ -157,6 +157,12 @@
 
 ## Completed ✅
 
+- **Multi-organization account fixes** (v1.12.0)
+  - Root cause: `detectOrgId` in `chrome/content.js` picked the first chat-capable org via `Array.find`, silently locking onto the wrong org for accounts belonging to more than one (personal + Team workspace, etc.) — causing "always 14 conversations" (that org's default page) and 404s exporting/bridging a conversation owned by a different org
+  - `fetchAllConversations` now paginates (`limit`/`offset`) with a safety guard against an unrecognized param scheme
+  - New `fetchChatCapableOrgs`, `fetchAllConversationsAllOrgs`, `fetchConversationAnyOrg` in `content.js` — Browse/Export All aggregate every chat-capable org's conversations (tagged with `_orgId`); single-conversation export/bridge automatically retries other orgs on a 404 and remembers whichever one worked
+  - popup.js/bridge.js persist the resolved org and surface a status note when a switch happens
+
 - **Chrome-only repo** (v1.11.1)
   - Removed the `firefox/` folder and all Firefox-specific instructions/docs — the extension is Chrome (Manifest V3) only going forward
   - Updated CLAUDE.md, README.md, docs/INSTALL.md, and `tests/package.json` accordingly
