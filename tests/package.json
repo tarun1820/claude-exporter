@@ -1,7 +1,7 @@
 {
   "name": "claude-exporter-tests",
   "private": true,
-  "description": "Test harness for Claude Exporter (chrome/utils.js is canonical; firefox/utils.js must mirror).",
+  "description": "Test harness for Claude Exporter (chrome/utils.js is the canonical source).",
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest"
