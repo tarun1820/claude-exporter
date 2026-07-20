@@ -12,6 +12,9 @@ const {
   formatModelName,
   getModelBadgeClass,
   DEFAULT_MODEL_TIMELINE,
+  extractBridgeContext,
+  generateBridgeMarkdown,
+  generateBridgeJSON,
 } = utils;
 
 // Regression coverage for the bug fixed in v1.9.1: bash/web_search/repl
@@ -552,5 +555,99 @@ describe('convertToMarkdown — smoke test', () => {
     };
     const md = convertToMarkdown(data, true);
     expect(md).toContain('My Chat');
+  });
+});
+
+// Fixture: a conversation with a goal, a decision, a TODO, a preference, and
+// a code artifact — exercises every heuristic bucket in extractBridgeContext.
+function bridgeFixture() {
+  return {
+    name: 'Build a CLI tool',
+    model: 'claude-sonnet-4-5-20250929',
+    created_at: '2026-04-01T12:00:00Z',
+    updated_at: '2026-04-01T12:05:00Z',
+    current_leaf_message_uuid: 'm3',
+    chat_messages: [
+      {
+        uuid: 'm1',
+        sender: 'human',
+        content: [{ type: 'text', text: "I want to build a CLI tool that exports data. Always use TypeScript, never plain JS." }],
+        parent_message_uuid: '00000000-0000-0000-0000-000000000000',
+      },
+      {
+        uuid: 'm2',
+        sender: 'assistant',
+        content: [
+          { type: 'text', text: "Sounds good. Let's go with commander.js for argument parsing." },
+          {
+            type: 'tool_use',
+            name: 'artifacts',
+            display_content: {
+              type: 'code_block',
+              code: 'console.log("hello");',
+              language: 'javascript',
+              filename: 'cli.js',
+            },
+          },
+        ],
+        parent_message_uuid: 'm1',
+      },
+      {
+        uuid: 'm3',
+        sender: 'human',
+        content: [{ type: 'text', text: 'Next steps: still need to add the export command and write tests.' }],
+        parent_message_uuid: 'm2',
+      },
+    ],
+  };
+}
+
+describe('extractBridgeContext', () => {
+  it('extracts objectives, decisions, pending work, preferences, and code snippets', () => {
+    const ctx = extractBridgeContext(bridgeFixture(), 'coding');
+    expect(ctx.objectives.some(o => o.includes('I want to build a CLI tool'))).toBe(true);
+    expect(ctx.decisions.some(d => d.includes("go with commander.js"))).toBe(true);
+    expect(ctx.pendingWork.some(p => p.includes('Next steps'))).toBe(true);
+    expect(ctx.preferences.some(p => p.includes('Always use TypeScript'))).toBe(true);
+    expect(ctx.codeSnippets).toHaveLength(1);
+    expect(ctx.codeSnippets[0].title).toBe('cli');
+    expect(ctx.mode).toBe('coding');
+    expect(ctx.sourceTitle).toBe('Build a CLI tool');
+    expect(ctx.messageCount).toBe(3);
+  });
+
+  it('falls back to coding mode for an invalid mode value', () => {
+    const ctx = extractBridgeContext(bridgeFixture(), 'not-a-real-mode');
+    expect(ctx.mode).toBe('coding');
+  });
+
+  it('captures the last assistant message as "where we left off"', () => {
+    const ctx = extractBridgeContext(bridgeFixture(), 'coding');
+    expect(ctx.pendingWork.some(p => p.includes('[Where we left off]'))).toBe(true);
+  });
+});
+
+describe('generateBridgeMarkdown', () => {
+  it('renders section headers and the continuation instruction', () => {
+    const ctx = extractBridgeContext(bridgeFixture(), 'coding');
+    const md = generateBridgeMarkdown(ctx);
+    expect(md).toContain('# Conversation Handoff: Build a CLI tool');
+    expect(md).toContain('## Objectives');
+    expect(md).toContain('## Pending Work / Where We Left Off');
+    expect(md).toContain('### cli');
+    expect(md).toContain('console.log("hello");');
+    expect(md).toContain('continue this conversation');
+  });
+});
+
+describe('generateBridgeJSON', () => {
+  it('wraps the bridge context in a versioned _meta block', () => {
+    const ctx = extractBridgeContext(bridgeFixture(), 'research');
+    const json = generateBridgeJSON(ctx);
+    expect(json._meta.app).toBe('claude-exporter');
+    expect(json._meta.bridgeVersion).toBe(1);
+    expect(json._meta.mode).toBe('research');
+    expect(json.objectives).toEqual(ctx.objectives);
+    expect(json.codeSnippets).toEqual(ctx.codeSnippets);
   });
 });

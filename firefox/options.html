@@ -239,6 +239,25 @@
   </div>
 
   <div class="section">
+    <h3>AI Conversation Bridge</h3>
+    <p>Optional: add your own Anthropic API key to enable AI-enhanced context extraction when bridging a conversation to another LLM. The key is stored only in this browser, sent only to <code>api.anthropic.com</code>, and only used when you explicitly enable "AI-enhanced extraction" on the Bridge page — never automatically. It is excluded from backup and diagnostics exports.</p>
+    <label for="bridgeApiKey">Anthropic API key</label>
+    <input type="text" id="bridgeApiKey" placeholder="sk-ant-...">
+    <label for="bridgeDefaultMode" style="margin-top: 12px;">Default transfer mode</label>
+    <select id="bridgeDefaultMode">
+      <option value="coding">Coding</option>
+      <option value="research">Research</option>
+      <option value="writing">Writing</option>
+      <option value="brainstorming">Brainstorming</option>
+    </select>
+    <div class="button-row">
+      <button id="saveBridgeBtn">Save Bridge Settings</button>
+      <button id="clearBridgeKeyBtn">Clear API Key</button>
+    </div>
+    <div id="bridgeStatus" class="status"></div>
+  </div>
+
+  <div class="section">
     <h3>Backup &amp; Restore</h3>
     <p>Save the extension's data — model snapshots, export history, and preferences — to a file you can restore later. Useful before uninstalling, or to move your data to another browser, device, or extension build.</p>
     <button id="backupBtn" style="margin-right: 8px;">Export Backup</button>

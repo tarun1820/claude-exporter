@@ -157,6 +157,13 @@
 
 ## Completed ✅
 
+- **AI Conversation Bridge** (v1.11.0)
+  - New `bridge.html` page distills a conversation into objectives/decisions/pending-work/preferences/code/files and exports a ready-to-paste Markdown prompt or JSON package for handing off to a different LLM
+  - Tier 1 (rule-based, `extractBridgeContext`) works with no API key; Tier 2 (`refineBridgeContextWithAI`) is an optional BYOK Anthropic API call
+  - Entry points: popup "Bridge to Another AI" button, browse-table row action, "Bridge Filtered" for merging a filtered set (e.g. one project) into a combined package
+  - New Options section for the API key (local-only storage, excluded from backup/diagnostics) and default transfer mode
+  - Follow-ups to consider: editable code-snippet/file sections in the bridge UI (currently read-only preview), support for non-Anthropic AI-refine providers, smarter heuristics (current Tier-1 patterns are regex-based and English-only)
+
 - **Removed redundant "View" button from browse table** (v1.10.9)
   - Chat name in the Name column is already a clickable link to the conversation; the "View" button duplicated that. Removed the button, handler, and `.btn-view` CSS. Narrower Actions column lets table `min-width` drop from 1200px to 1100px.
 

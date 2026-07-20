@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.11.0]
+
+- **New: AI Conversation Bridge** — distills a conversation into a compact handoff package (objectives, completed/pending work, decisions, preferences, code/files) so it can be pasted into a different LLM (ChatGPT, Gemini, another Claude chat) and continued from where it left off, instead of dumping the raw transcript.
+  - New `bridge.html`/`bridge.js` review page: pick a transfer mode (Coding / Research / Writing / Brainstorming), edit the extracted sections, then export as a ready-to-paste Markdown prompt or a structured JSON package.
+  - Tier 1 extraction (`extractBridgeContext` in `utils.js`) is rule-based and works offline for everyone, no API key required.
+  - Tier 2 (`refineBridgeContextWithAI`) is an optional AI-enhanced pass — bring your own Anthropic API key in Options to refine the extraction via a direct call to `api.anthropic.com`. The key never leaves this device, is only sent when you explicitly toggle AI-enhanced extraction, and is excluded from backup/diagnostics exports.
+  - New entry points: "Bridge to Another AI" button in the popup, a "Bridge" row action in the browse table, and a "Bridge Filtered" button that merges every currently-filtered conversation (e.g. a project search) into one combined bridge package.
+  - New Options section for the API key and default transfer mode.
+  - Added `https://api.anthropic.com/*` to host permissions (Chrome + Firefox) for the optional AI-enhanced call.
+
 ## [1.10.17]
 
 - Import Backup now asks merge-vs-replace **before** opening the file picker (was after). Click Import Backup → modal asks "Merge with current data" or "Replace all current data" + "Choose File…" → file picker opens → import runs with the chosen mode. Lets you back out before navigating filesystem, and removes the awkward two-step confirmation. The modal no longer shows file contents (snapshot/export counts, creation date), since the file isn't selected yet — file validation still happens after selection.

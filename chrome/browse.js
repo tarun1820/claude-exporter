@@ -484,6 +484,9 @@ function displayConversations() {
             <button class="btn-small btn-export" data-id="${escapeHtml(conv.uuid)}" data-name="${escapeHtml(conv.name)}">
               Export
             </button>
+            <button class="btn-small btn-bridge" data-id="${escapeHtml(conv.uuid)}" title="Bridge this conversation to another AI">
+              Bridge
+            </button>
           </div>
         </td>
         <td class="checkbox-col">
@@ -506,6 +509,14 @@ function displayConversations() {
   document.querySelectorAll('.btn-export').forEach(btn => {
     btn.addEventListener('click', (e) => {
       exportConversation(e.target.dataset.id, e.target.dataset.name);
+    });
+  });
+
+  // Add bridge button listeners
+  document.querySelectorAll('.btn-bridge').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const url = chrome.runtime.getURL(`bridge.html?orgId=${encodeURIComponent(orgId)}&conversationId=${encodeURIComponent(e.target.dataset.id)}`);
+      chrome.tabs.create({ url });
     });
   });
   
@@ -532,6 +543,7 @@ function displayConversations() {
 
   // Enable export all button
   document.getElementById('exportAllBtn').disabled = false;
+  document.getElementById('bridgeFilteredBtn').disabled = filteredConversations.length === 0;
 }
 
 // Handle individual checkbox change
@@ -1060,6 +1072,114 @@ async function exportAllFiltered() {
   }
 }
 
+// Merge per-conversation bridge contexts into one combined package: dedupe
+// repeated decisions/preferences (case-insensitive), concatenate objectives
+// and pending work labeled by conversation name so the source stays traceable.
+function mergeBridgeContexts(contexts, mode) {
+  const dedupedDecisions = [];
+  const dedupedPreferences = [];
+  const seenDecisions = new Set();
+  const seenPreferences = new Set();
+  const objectives = [];
+  const pendingWork = [];
+  const completedTasks = [];
+  const codeSnippets = [];
+  const files = [];
+
+  for (const ctx of contexts) {
+    const label = ctx.sourceTitle || 'Untitled Conversation';
+    for (const d of ctx.decisions) {
+      const key = d.toLowerCase();
+      if (!seenDecisions.has(key)) { seenDecisions.add(key); dedupedDecisions.push(d); }
+    }
+    for (const p of ctx.preferences) {
+      const key = p.toLowerCase();
+      if (!seenPreferences.has(key)) { seenPreferences.add(key); dedupedPreferences.push(p); }
+    }
+    ctx.objectives.forEach(o => objectives.push(`[${label}] ${o}`));
+    ctx.pendingWork.forEach(p => pendingWork.push(`[${label}] ${p}`));
+    ctx.completedTasks.forEach(c => completedTasks.push(`[${label}] ${c}`));
+    codeSnippets.push(...ctx.codeSnippets);
+    files.push(...ctx.files);
+  }
+
+  return {
+    objectives,
+    completedTasks,
+    pendingWork,
+    decisions: dedupedDecisions,
+    preferences: dedupedPreferences,
+    codeSnippets,
+    files,
+    mode,
+    sourceModel: contexts.map(c => c.sourceModel).filter((v, i, a) => a.indexOf(v) === i).join(', ') || 'unknown',
+    sourceTitle: `Project Bridge (${contexts.length} conversations)`,
+    messageCount: contexts.reduce((sum, c) => sum + c.messageCount, 0),
+  };
+}
+
+// Fetch, extract, and merge every currently-filtered conversation into one
+// Bridge package, then open bridge.html to review/export it. Filtering the
+// table down to one project's conversations (via search) before running this
+// gives a project-level bridge without a separate code path.
+async function bridgeFiltered() {
+  const button = document.getElementById('bridgeFilteredBtn');
+  const conversations = selectedConversations.size > 0
+    ? allConversations.filter(conv => selectedConversations.has(conv.uuid))
+    : filteredConversations;
+
+  if (conversations.length === 0) return;
+
+  button.disabled = true;
+  const originalText = button.textContent;
+
+  const progressModal = document.getElementById('progressModal');
+  const progressBar = document.getElementById('progressBar');
+  const progressText = document.getElementById('progressText');
+  const progressStats = document.getElementById('progressStats');
+  progressModal.style.display = 'block';
+  progressBar.style.width = '0%';
+
+  try {
+    const contexts = [];
+    let completed = 0;
+    for (const conv of conversations) {
+      progressText.textContent = `Extracting bridge context: ${conv.name}...`;
+      const response = await fetch(
+        `https://claude.ai/api/organizations/${orgId}/chat_conversations/${conv.uuid}?tree=True&rendering_mode=messages&render_all_tools=true`,
+        { credentials: 'include', headers: { 'Accept': 'application/json' } }
+      );
+      if (response.ok) {
+        const data = await response.json();
+        data.model = inferModel(data);
+        contexts.push(extractBridgeContext(data, 'coding'));
+      }
+      completed++;
+      progressBar.style.width = `${Math.round((completed / conversations.length) * 100)}%`;
+      progressStats.textContent = `${completed} / ${conversations.length}`;
+    }
+
+    if (contexts.length === 0) {
+      throw new Error('Could not fetch any of the filtered conversations.');
+    }
+
+    const merged = mergeBridgeContexts(contexts, 'coding');
+    await new Promise((resolve) => {
+      chrome.storage.local.set({ pendingBridgeContext: merged }, resolve);
+    });
+
+    progressModal.style.display = 'none';
+    chrome.tabs.create({ url: chrome.runtime.getURL('bridge.html?source=project') });
+  } catch (error) {
+    console.error('Bridge filtered error:', error);
+    progressModal.style.display = 'none';
+    showToast(`Bridge failed: ${error.message}`, true);
+  } finally {
+    button.disabled = false;
+    button.textContent = originalText;
+  }
+}
+
 // Conversion functions are now imported from utils.js
 // Functions available: getCurrentBranch, convertToMarkdown, convertToText, downloadFile
 
@@ -1280,4 +1400,5 @@ function setupEventListeners() {
 
   // Export all button
   document.getElementById('exportAllBtn').addEventListener('click', exportAllFiltered);
+  document.getElementById('bridgeFilteredBtn').addEventListener('click', bridgeFiltered);
 }
