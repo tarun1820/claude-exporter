@@ -157,6 +157,11 @@
 
 ## Completed ✅
 
+- **New icon + fancier visual redesign + BYOK documentation** (v1.14.0)
+  - Replaced icon artwork (16/32/48/128px), added the previously-missing `icon32.png` to the manifest
+  - Refreshed visual language across all 4 pages: gradient accent (`--gradient-primary`), rounder corner scale (`--radius-sm/md/lg`), teal secondary accent, gradient-clipped titles, updated font stack — also brought `content.css`'s floating button in line, closing the follow-up from the v1.12.1 unification pass
+  - Added a full "AI Conversation Bridge API keys (BYOK)" section to `docs/INSTALL.md` — where to get a key for each provider, key format prefixes, how provider switching works
+
 - **Multi-provider AI Conversation Bridge (BYOK) + credit line** (v1.13.0)
   - `refineBridgeContextWithAI` in `chrome/utils.js` now dispatches to Anthropic, OpenAI, or Google Gemini based on a `provider` param, instead of being hardcoded to Anthropic's Messages API
   - Options page gained an "AI Provider" selector plus one API key field per provider (`bridgeApiKeyAnthropic`/`bridgeApiKeyOpenAI`/`bridgeApiKeyGemini`), so switching providers doesn't discard previously-entered keys

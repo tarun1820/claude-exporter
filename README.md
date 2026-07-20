@@ -39,7 +39,7 @@ See [docs/INSTALL.md](docs/INSTALL.md) for installation instructions (Chrome Web
 2. Click the extension icon, then **"Bridge to Another AI"** (or use the **Bridge** row action from the Browse page)
 3. A new tab opens with the distilled context — objectives, decisions, pending work, preferences, and code/files — grouped by transfer mode (Coding / Research / Writing / Brainstorming)
 4. Edit any section if needed, then **Copy Markdown Prompt** (paste straight into ChatGPT/Gemini/another Claude chat) or download as Markdown/JSON
-5. Optional: pick a provider (Anthropic, OpenAI, or Google Gemini) and add your own API key for it in Options to enable **AI-enhanced extraction**, which refines the heuristic pass with a real model call. The key is stored only on this device, sent only to that provider's own API, and only used when you explicitly toggle it on
+5. Optional: pick a provider (Anthropic, OpenAI, or Google Gemini) and add your own API key for it in Options to enable **AI-enhanced extraction**, which refines the heuristic pass with a real model call. The key is stored only on this device, sent only to that provider's own API, and only used when you explicitly toggle it on. See [docs/INSTALL.md](docs/INSTALL.md#optional-ai-conversation-bridge-api-keys-byok) for where to get a key for each provider
 6. From the Browse page, use **Bridge Filtered** to merge every currently-filtered conversation (e.g. a project search) into one combined bridge package
 
 #### Browse All Conversations

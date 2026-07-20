@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.14.0]
+
+- **New extension icon** — replaced `icon16/32/48/128.png` with new artwork; added `icon32.png` (previously missing) and wired it into `manifest.json`'s `action.default_icon`/`icons` blocks.
+- **Fancier visual redesign** across Popup, Browse, Bridge, and Options: a vibrant indigo→purple→pink gradient accent (`--gradient-primary`) on headers/primary buttons/progress bars, rounder corners throughout (new `--radius-sm/md/lg` tokens replacing the flatter 4-8px scale), a teal secondary accent, gradient-clipped page titles, and a refreshed font stack. Also updated `content.css`'s floating claude.ai button to match, closing out a long-standing follow-up.
+- **Documented the multi-provider AI Bridge setup**: `docs/INSTALL.md` now has a full "AI Conversation Bridge API keys (BYOK)" section with a table of where to get a key for each provider (Anthropic/OpenAI/Gemini), key format prefixes, and how provider switching works; README links to it.
+
 ## [1.13.0]
 
 - **AI Conversation Bridge now supports OpenAI and Google Gemini, not just Anthropic.** Options gained an "AI Provider" selector plus a separate API key field per provider — pick whichever provider you have a key for, and only that provider's key is ever read or sent (to that provider's own API, only when you explicitly enable AI-enhanced extraction).

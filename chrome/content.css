@@ -4,7 +4,7 @@
     bottom: 20px;
     right: 20px;
     z-index: 9999;
-    background: #5436DA;
+    background: linear-gradient(135deg, #4f46e5 0%, #9333ea 55%, #db2777 100%);
     color: white;
     border: none;
     border-radius: 50%;
@@ -13,10 +13,10 @@
     font-size: 24px;
     cursor: pointer;
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    transition: all 0.3s;
+    transition: filter 0.3s, transform 0.3s;
   }
-  
+
   .claude-exporter-button:hover {
-    background: #4329B8;
+    filter: brightness(1.08);
     transform: scale(1.1);
   }

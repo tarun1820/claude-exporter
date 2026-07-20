@@ -12,10 +12,15 @@
     --text-muted: #808080;
     --border-color: #3a3a3a;
     --border-light: #333333;
-    --primary-color: #6b52e8;
-    --primary-hover: #7d66f0;
-    --secondary-color: #32b34a;
-    --secondary-hover: #3cc752;
+    --primary-color: #7c6ef2;
+    --primary-hover: #6d5ef0;
+    --secondary-color: #14b8a6;
+    --secondary-hover: #2dd4bf;
+    --gradient-primary: linear-gradient(135deg, #6366f1 0%, #a855f7 55%, #ec4899 100%);
+    --gradient-primary-hover: linear-gradient(135deg, #565af0 0%, #9333ea 55%, #db2777 100%);
+    --radius-sm: 8px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
     --disabled-bg: #3a3a3a;
     --disabled-text: #808080;
     --success-bg: #1a4d2e;
@@ -26,7 +31,7 @@
     --info-text: #87ceeb;
     --shadow-sm: rgba(0, 0, 0, 0.3);
     --shadow-md: rgba(0, 0, 0, 0.5);
-    --focus-ring: rgba(107, 82, 232, 0.15);
+    --focus-ring: rgba(124, 110, 242, 0.25);
   }
   :root[data-theme="light"] {
     --bg-body: #f6f7f9;
@@ -36,10 +41,15 @@
     --text-muted: #999999;
     --border-color: #e2e4e9;
     --border-light: #f0f0f0;
-    --primary-color: #5d44e8;
-    --primary-hover: #4a35ba;
-    --secondary-color: #10b981;
-    --secondary-hover: #059669;
+    --primary-color: #6d4de6;
+    --primary-hover: #5638c9;
+    --secondary-color: #0d9488;
+    --secondary-hover: #0f766e;
+    --gradient-primary: linear-gradient(135deg, #4f46e5 0%, #9333ea 55%, #db2777 100%);
+    --gradient-primary-hover: linear-gradient(135deg, #4338ca 0%, #7e22ce 55%, #be185d 100%);
+    --radius-sm: 8px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
     --disabled-bg: #e9ecef;
     --disabled-text: #999999;
     --success-bg: #d1fae5;
@@ -50,22 +60,22 @@
     --info-text: #075985;
     --shadow-sm: rgba(0, 0, 0, 0.05);
     --shadow-md: rgba(0, 0, 0, 0.15);
-    --focus-ring: rgba(93, 68, 232, 0.15);
+    --focus-ring: rgba(109, 77, 230, 0.2);
   }
   * { box-sizing: border-box; }
   body {
     margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI Variable', 'Segoe UI', Roboto, sans-serif;
     background: var(--bg-body);
     color: var(--text-primary);
   }
   #bridge-header {
-    padding: 18px 28px;
-    background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+    padding: 20px 28px;
+    background: var(--gradient-primary);
     color: #fff;
   }
-  #bridge-header h1 { margin: 0; font-size: 18px; }
-  #bridge-header p { margin: 4px 0 0; font-size: 13px; opacity: 0.85; }
+  #bridge-header h1 { margin: 0; font-size: 19px; font-weight: 700; letter-spacing: 0.2px; }
+  #bridge-header p { margin: 4px 0 0; font-size: 13px; opacity: 0.9; }
   .container { max-width: 960px; margin: 0 auto; padding: 20px 28px 60px; }
   .toolbar {
     display: flex;
@@ -74,7 +84,7 @@
     align-items: center;
     background: var(--bg-card);
     border: 1px solid var(--border-color);
-    border-radius: 8px;
+    border-radius: var(--radius-lg);
     padding: 14px 16px;
     margin-bottom: 18px;
   }
@@ -83,7 +93,7 @@
     background: var(--bg-body);
     color: var(--text-primary);
     border: 1px solid var(--border-color);
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     padding: 8px 10px;
     font-size: 13px;
   }
@@ -99,22 +109,25 @@
   }
   button {
     border: none;
-    border-radius: 6px;
-    padding: 8px 14px;
+    border-radius: var(--radius-md);
+    padding: 9px 16px;
     font-size: 13px;
-    font-weight: 500;
+    font-weight: 600;
+    letter-spacing: 0.1px;
     cursor: pointer;
-    background: var(--primary-color);
+    background: var(--gradient-primary);
     color: #fff;
+    box-shadow: 0 2px 8px var(--shadow-sm);
+    transition: filter 0.15s, box-shadow 0.15s;
   }
-  button:hover { background: var(--primary-hover); }
-  button:disabled { background: var(--disabled-bg); color: var(--disabled-text); cursor: not-allowed; }
+  button:hover { filter: brightness(1.08); box-shadow: 0 4px 12px var(--shadow-md); }
+  button:disabled { background: var(--disabled-bg); color: var(--disabled-text); cursor: not-allowed; box-shadow: none; filter: none; }
   button.secondary { background: var(--secondary-color); }
-  button.secondary:hover { background: var(--secondary-hover); }
+  button.secondary:hover { background: var(--secondary-hover); filter: none; }
   .section {
     background: var(--bg-card);
     border: 1px solid var(--border-color);
-    border-radius: 8px;
+    border-radius: var(--radius-lg);
     padding: 16px;
     margin-bottom: 16px;
   }
@@ -126,7 +139,7 @@
     background: var(--bg-body);
     color: var(--text-primary);
     border: 1px solid var(--border-color);
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     padding: 8px 10px;
     font-size: 13px;
     font-family: inherit;
@@ -134,7 +147,7 @@
   }
   .hint { font-size: 11px; color: var(--text-secondary); margin-top: 4px; }
   .actions { display: flex; gap: 10px; flex-wrap: wrap; margin: 18px 0; }
-  #status { margin: 10px 0; padding: 8px 12px; border-radius: 6px; font-size: 13px; display: none; }
+  #status { margin: 10px 0; padding: 8px 12px; border-radius: var(--radius-sm); font-size: 13px; display: none; }
   #status.success { background: var(--success-bg); color: var(--success-text); display: block; }
   #status.error { background: var(--error-bg); color: var(--error-text); display: block; }
   #status.info { background: var(--info-bg); color: var(--info-text); display: block; }
@@ -143,7 +156,7 @@
   pre.preview {
     background: var(--bg-body);
     border: 1px solid var(--border-color);
-    border-radius: 5px;
+    border-radius: var(--radius-sm);
     padding: 10px;
     font-size: 12px;
     max-height: 260px;
@@ -167,7 +180,7 @@
           <option value="brainstorming">Brainstorming</option>
         </select>
       </label>
-      <label id="aiToggleWrap" title="Refine the extraction using your Anthropic API key (set in Options)">
+      <label id="aiToggleWrap" title="Refine the extraction using your configured AI provider's API key (set in Options)">
         <input type="checkbox" id="aiEnhanced">
         AI-enhanced extraction
       </label>

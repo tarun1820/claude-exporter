@@ -10,10 +10,15 @@
       --text-muted: #808080;
       --border-color: #3a3a3a;
       --border-light: #333333;
-      --primary-color: #6b52e8;
-      --primary-hover: #7d66f0;
-      --secondary-color: #32b34a;
-      --secondary-hover: #3cc752;
+      --primary-color: #7c6ef2;
+      --primary-hover: #6d5ef0;
+      --secondary-color: #14b8a6;
+      --secondary-hover: #2dd4bf;
+      --gradient-primary: linear-gradient(135deg, #6366f1 0%, #a855f7 55%, #ec4899 100%);
+      --gradient-primary-hover: linear-gradient(135deg, #565af0 0%, #9333ea 55%, #db2777 100%);
+      --radius-sm: 8px;
+      --radius-md: 10px;
+      --radius-lg: 16px;
       --disabled-bg: #3a3a3a;
       --disabled-text: #808080;
       --success-bg: #1a4d2e;
@@ -22,10 +27,10 @@
       --error-text: #ff9999;
       --info-bg: #1a3d4d;
       --info-text: #87ceeb;
-      --link-color: #8b7aff;
+      --link-color: #a78bfa;
       --shadow-sm: rgba(0, 0, 0, 0.3);
       --shadow-md: rgba(0, 0, 0, 0.5);
-      --focus-ring: rgba(107, 82, 232, 0.15);
+      --focus-ring: rgba(124, 110, 242, 0.25);
     }
 
     /* Light mode when system prefers light */
@@ -35,10 +40,15 @@
       --text-muted: #999999;
       --border-color: #e2e4e9;
       --border-light: #f0f0f0;
-      --primary-color: #5d44e8;
-      --primary-hover: #4a35ba;
-      --secondary-color: #10b981;
-      --secondary-hover: #059669;
+      --primary-color: #6d4de6;
+      --primary-hover: #5638c9;
+      --secondary-color: #0d9488;
+      --secondary-hover: #0f766e;
+      --gradient-primary: linear-gradient(135deg, #4f46e5 0%, #9333ea 55%, #db2777 100%);
+      --gradient-primary-hover: linear-gradient(135deg, #4338ca 0%, #7e22ce 55%, #be185d 100%);
+      --radius-sm: 8px;
+      --radius-md: 10px;
+      --radius-lg: 16px;
       --disabled-bg: #e9ecef;
       --disabled-text: #999999;
       --success-bg: #d1fae5;
@@ -47,16 +57,16 @@
       --error-text: #991b1b;
       --info-bg: #e0f2fe;
       --info-text: #075985;
-      --link-color: #5d44e8;
+      --link-color: #6d4de6;
       --shadow-sm: rgba(0, 0, 0, 0.05);
       --shadow-md: rgba(0, 0, 0, 0.15);
-      --focus-ring: rgba(93, 68, 232, 0.15);
+      --focus-ring: rgba(109, 77, 230, 0.2);
     }
 
     body {
-      width: 275px;
+      width: 280px;
       padding: 8px;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI Variable', 'Segoe UI', Roboto, sans-serif;
       margin: 0;
       background-color: var(--bg-body);
       color: var(--text-primary);
@@ -68,27 +78,36 @@
       margin-top: 0;
       color: var(--text-primary);
       font-size: 16px;
+      font-weight: 700;
     }
     button {
       width: 100%;
-      padding: 8px 14px;
+      padding: 9px 14px;
       margin: 4px 0;
       border: none;
-      border-radius: 6px;
-      background: var(--primary-color);
+      border-radius: var(--radius-md);
+      background: var(--gradient-primary);
       color: white;
       font-size: 13px;
-      font-weight: 500;
+      font-weight: 600;
+      letter-spacing: 0.1px;
       cursor: pointer;
-      transition: background 0.2s;
+      box-shadow: 0 2px 8px var(--shadow-sm);
+      transition: filter 0.15s, transform 0.1s, box-shadow 0.15s;
     }
     button:hover {
-      background: var(--primary-hover);
+      filter: brightness(1.08);
+      box-shadow: 0 4px 12px var(--shadow-md);
+    }
+    button:active {
+      transform: translateY(1px);
     }
     button:disabled {
       background: var(--disabled-bg);
       cursor: not-allowed;
       color: var(--disabled-text);
+      box-shadow: none;
+      filter: none;
     }
     #browseConversations {
       background: var(--secondary-color);
@@ -96,11 +115,12 @@
     }
     #browseConversations:hover {
       background: var(--secondary-hover);
+      filter: none;
     }
     .status {
       margin: 8px 0;
       padding: 8px 12px;
-      border-radius: 6px;
+      border-radius: var(--radius-sm);
       font-size: 13px;
     }
     .success {
@@ -139,7 +159,7 @@
       padding: 5px 8px;
       margin-top: 3px;
       border: 1px solid var(--border-color);
-      border-radius: 5px;
+      border-radius: var(--radius-sm);
       background-color: var(--bg-body);
       color: var(--text-primary);
       font-size: 12px;
@@ -151,15 +171,15 @@
     }
     #popup-header {
       margin: -8px -8px 8px -8px;
-      padding: 14px 16px;
-      background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+      padding: 16px;
+      background: var(--gradient-primary);
       text-align: center;
     }
     #header-title {
       color: white;
-      font-size: 15px;
-      font-weight: 600;
-      letter-spacing: 0.3px;
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
     }
     #header-version {
       color: rgba(255, 255, 255, 0.7);
