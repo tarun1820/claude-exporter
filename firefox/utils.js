@@ -688,6 +688,10 @@ function getModelBadgeClass(model) {
 function backupExtensionData(onComplete) {
   chrome.storage.local.get(null, (local) => {
     chrome.storage.sync.get(null, (sync) => {
+      // Never persist the user's Anthropic API key in a backup file — it's a
+      // secret, not app state, and backups are meant to be shareable/archivable.
+      const localCopy = { ...(local || {}) };
+      delete localCopy.bridgeApiKey;
       const backup = {
         _meta: {
           app: 'claude-exporter',
@@ -695,7 +699,7 @@ function backupExtensionData(onComplete) {
           extensionVersion: chrome.runtime.getManifest().version,
           createdAt: new Date().toISOString()
         },
-        local: local || {},
+        local: localCopy,
         sync: sync || {}
       };
       const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
@@ -1038,6 +1042,285 @@ function generateDiagnostics(onComplete) {
   );
 }
 
+// ============================================================================
+// AI Conversation Bridge
+// ============================================================================
+// Distills a conversation into a compact handoff package (objectives,
+// completed/pending work, decisions, preferences, code/files) so it can be
+// pasted into a different LLM and continued from where Claude left off.
+// Tier 1 (extractBridgeContext) is rule-based and runs entirely offline.
+// Tier 2 (refineBridgeContextWithAI) is an optional BYOK call to Anthropic's
+// Messages API that refines the Tier 1 pass — see bridge.js for the toggle.
+
+const CE_BRIDGE_MODES = ['coding', 'research', 'writing', 'brainstorming'];
+
+const CE_GOAL_PATTERNS = [/\bi want to\b/i, /\blet'?s build\b/i, /\bhelp me\b/i, /\bi need\b/i, /\bcan you\b/i, /\bi'?m trying to\b/i];
+const CE_DECISION_PATTERNS = [/\bwe decided\b/i, /\bi'?ll use\b/i, /\blet'?s go with\b/i, /\binstead of\b/i, /\bdecided to\b/i, /\bgoing with\b/i];
+const CE_PENDING_PATTERNS = [/\bnext steps?\b/i, /\bstill need(s)? to\b/i, /\btodo\b/i, /\bnot yet done\b/i, /\bremaining\b/i, /\btbd\b/i];
+const CE_PREFERENCE_PATTERNS = [/\balways\b/i, /\bnever\b/i, /\bplease avoid\b/i, /\bmy preference is\b/i, /\bprefer\b/i, /\bdon'?t\b/i];
+
+// Pull the text (excluding old-format artifact tags) out of a single message.
+function ceGetMessageText(message) {
+  let text = '';
+  if (message.content && Array.isArray(message.content)) {
+    for (const content of message.content) {
+      if (content.type === 'text' && content.text) {
+        text += content.text.replace(/<antArtifact[^>]*>[\s\S]*?<\/antArtifact>/g, '').trim() + ' ';
+      }
+    }
+  } else if (message.text) {
+    text += message.text.replace(/<antArtifact[^>]*>[\s\S]*?<\/antArtifact>/g, '').trim();
+  }
+  return text.trim();
+}
+
+// Split text into sentence-ish chunks for heuristic scanning.
+function ceSplitSentences(text) {
+  return text.split(/(?<=[.!?])\s+|\n+/).map(s => s.trim()).filter(Boolean);
+}
+
+function ceMatchesAny(sentence, patterns) {
+  return patterns.some(p => p.test(sentence));
+}
+
+// Tier 1: rule-based, synchronous, no network. Returns a plain object shaped
+// identically to what refineBridgeContextWithAI produces, so rendering code
+// never needs to know which tier ran.
+function extractBridgeContext(data, mode = 'coding') {
+  if (!CE_BRIDGE_MODES.includes(mode)) mode = 'coding';
+
+  const branchMessages = getCurrentBranch(data);
+  const objectives = [];
+  const decisions = [];
+  const pendingWork = [];
+  const preferences = [];
+  const completedTasks = [];
+  const seen = new Set();
+
+  const addUnique = (list, text) => {
+    const key = text.toLowerCase();
+    if (text && !seen.has(key)) {
+      seen.add(key);
+      list.push(text);
+    }
+  };
+
+  branchMessages.forEach((message, index) => {
+    const text = ceGetMessageText(message);
+    if (!text) return;
+    const isHuman = message.sender === 'human';
+
+    if (isHuman && index === 0) {
+      addUnique(objectives, text.length > 400 ? text.slice(0, 400) + '…' : text);
+    }
+
+    for (const sentence of ceSplitSentences(text)) {
+      if (isHuman && ceMatchesAny(sentence, CE_GOAL_PATTERNS)) addUnique(objectives, sentence);
+      if (ceMatchesAny(sentence, CE_DECISION_PATTERNS)) addUnique(decisions, sentence);
+      if (ceMatchesAny(sentence, CE_PENDING_PATTERNS)) addUnique(pendingWork, sentence);
+      if (isHuman && ceMatchesAny(sentence, CE_PREFERENCE_PATTERNS)) addUnique(preferences, sentence);
+    }
+  });
+
+  // "Where we left off" — the last assistant message closes out the pending
+  // work list so the new LLM knows the actual conversational tail, not just
+  // sentences that happened to match a TODO-shaped pattern.
+  const lastAssistantMessage = [...branchMessages].reverse().find(m => m.sender !== 'human');
+  if (lastAssistantMessage) {
+    const tailText = ceGetMessageText(lastAssistantMessage);
+    if (tailText) {
+      const tail = tailText.length > 600 ? tailText.slice(0, 600) + '…' : tailText;
+      addUnique(pendingWork, `[Where we left off] ${tail}`);
+    }
+  }
+
+  // Completed work: assistant messages that aren't the tail, summarized by
+  // first sentence — a lightweight signal of what's already been done.
+  branchMessages.forEach((message) => {
+    if (message.sender === 'human' || message === lastAssistantMessage) return;
+    const text = ceGetMessageText(message);
+    if (!text) return;
+    const firstSentence = ceSplitSentences(text)[0];
+    if (firstSentence) addUnique(completedTasks, firstSentence);
+  });
+
+  const files = extractArtifactFiles(data, 'original');
+  const codeSnippets = [];
+  branchMessages.forEach(message => {
+    for (const artifact of extractArtifactsFromMessage(message)) {
+      codeSnippets.push({ title: artifact.title, language: artifact.language, content: artifact.content });
+    }
+  });
+
+  return {
+    objectives,
+    completedTasks: completedTasks.slice(0, 20),
+    pendingWork,
+    decisions,
+    preferences,
+    codeSnippets,
+    files,
+    mode,
+    sourceModel: data.model || 'unknown',
+    sourceTitle: data.name || 'Untitled Conversation',
+    messageCount: branchMessages.length,
+  };
+}
+
+// Tier 2: async, network. Sends the Tier-1 pass plus condensed branch text to
+// Anthropic's Messages API and asks the model to return a refined JSON object
+// in the same shape. Must be called from an extension page context (not a
+// claude.ai content script — the page's CSP would block the cross-origin
+// call). apiKey is the user's own BYOK Anthropic key, never transmitted
+// anywhere but api.anthropic.com.
+async function refineBridgeContextWithAI(bridgeContext, rawBranchText, apiKey, mode = 'coding', model = 'claude-haiku-4-5-20251001') {
+  const MAX_BRANCH_CHARS = 12000;
+  const condensed = rawBranchText.length > MAX_BRANCH_CHARS
+    ? rawBranchText.slice(0, MAX_BRANCH_CHARS) + '\n…(truncated)'
+    : rawBranchText;
+
+  const schemaHint = `{
+  "objectives": ["..."],
+  "completedTasks": ["..."],
+  "pendingWork": ["..."],
+  "decisions": ["..."],
+  "preferences": ["..."],
+  "codeSnippets": [{"title": "...", "language": "...", "content": "..."}],
+  "files": [{"filename": "...", "content": "..."}]
+}`;
+
+  const systemPrompt = `You are extracting a handoff context package from a conversation with an AI assistant, so the conversation can continue in a different LLM. Mode: ${mode}. Respond with ONLY a JSON object matching this shape (omit keys with no content, use empty arrays if nothing applies):\n${schemaHint}`;
+
+  const userPrompt = `Here is a rule-based first pass at the extraction:\n${JSON.stringify({
+    objectives: bridgeContext.objectives,
+    completedTasks: bridgeContext.completedTasks,
+    pendingWork: bridgeContext.pendingWork,
+    decisions: bridgeContext.decisions,
+    preferences: bridgeContext.preferences,
+  }, null, 2)}\n\nHere is the conversation transcript to refine it against:\n${condensed}\n\nReturn the refined JSON object only.`;
+
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: 4096,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userPrompt }],
+    }),
+  });
+
+  if (!response.ok) {
+    const errBody = await response.text().catch(() => '');
+    throw new Error(`Anthropic API request failed: ${response.status} ${errBody}`.trim());
+  }
+
+  const result = await response.json();
+  const textBlock = (result.content || []).find(b => b.type === 'text');
+  if (!textBlock || !textBlock.text) {
+    throw new Error('Anthropic API returned no text content to parse.');
+  }
+
+  let refined;
+  try {
+    const jsonMatch = textBlock.text.match(/\{[\s\S]*\}/);
+    refined = JSON.parse(jsonMatch ? jsonMatch[0] : textBlock.text);
+  } catch (e) {
+    throw new Error('Failed to parse the AI-refined bridge context as JSON.');
+  }
+
+  return {
+    objectives: refined.objectives || bridgeContext.objectives,
+    completedTasks: refined.completedTasks || bridgeContext.completedTasks,
+    pendingWork: refined.pendingWork || bridgeContext.pendingWork,
+    decisions: refined.decisions || bridgeContext.decisions,
+    preferences: refined.preferences || bridgeContext.preferences,
+    codeSnippets: (refined.codeSnippets && refined.codeSnippets.length) ? refined.codeSnippets : bridgeContext.codeSnippets,
+    files: bridgeContext.files,
+    mode: bridgeContext.mode,
+    sourceModel: bridgeContext.sourceModel,
+    sourceTitle: bridgeContext.sourceTitle,
+    messageCount: bridgeContext.messageCount,
+  };
+}
+
+// Section ordering per transfer mode — earlier sections are emphasized first
+// in the rendered Markdown prompt.
+const CE_BRIDGE_MODE_ORDER = {
+  coding: ['files', 'codeSnippets', 'objectives', 'decisions', 'pendingWork', 'completedTasks', 'preferences'],
+  research: ['objectives', 'decisions', 'completedTasks', 'pendingWork', 'files', 'codeSnippets', 'preferences'],
+  writing: ['objectives', 'preferences', 'decisions', 'completedTasks', 'pendingWork', 'files', 'codeSnippets'],
+  brainstorming: ['objectives', 'decisions', 'pendingWork', 'completedTasks', 'preferences', 'files', 'codeSnippets'],
+};
+
+const CE_BRIDGE_SECTION_TITLES = {
+  objectives: 'Objectives',
+  completedTasks: 'Completed Work',
+  pendingWork: 'Pending Work / Where We Left Off',
+  decisions: 'Key Decisions',
+  preferences: 'User Preferences',
+  codeSnippets: 'Code Snippets',
+  files: 'Files',
+};
+
+// Render the ready-to-paste Markdown handoff prompt.
+function generateBridgeMarkdown(bridgeContext) {
+  const order = CE_BRIDGE_MODE_ORDER[bridgeContext.mode] || CE_BRIDGE_MODE_ORDER.coding;
+  let md = `# Conversation Handoff: ${bridgeContext.sourceTitle}\n\n`;
+  md += `You are continuing a conversation that started with Claude (${bridgeContext.sourceModel}). `;
+  md += `Below is the distilled context — objectives, decisions, pending work, and any code/files — so you can pick up exactly where it left off.\n\n`;
+
+  for (const key of order) {
+    const value = bridgeContext[key];
+    if (!value || value.length === 0) continue;
+    md += `## ${CE_BRIDGE_SECTION_TITLES[key]}\n\n`;
+
+    if (key === 'codeSnippets') {
+      for (const snippet of value) {
+        md += `### ${snippet.title}\n\`\`\`${snippet.language}\n${snippet.content}\n\`\`\`\n\n`;
+      }
+    } else if (key === 'files') {
+      for (const file of value) {
+        md += `### ${file.filename}\n\`\`\`\n${file.content}\n\`\`\`\n\n`;
+      }
+    } else {
+      for (const item of value) {
+        md += `- ${item}\n`;
+      }
+      md += `\n`;
+    }
+  }
+
+  md += `---\n\nPlease continue this conversation from the "Pending Work / Where We Left Off" section above.\n`;
+  return md;
+}
+
+// Render the structured JSON handoff package.
+function generateBridgeJSON(bridgeContext) {
+  return {
+    _meta: {
+      app: 'claude-exporter',
+      bridgeVersion: 1,
+      mode: bridgeContext.mode,
+      sourceModel: bridgeContext.sourceModel,
+      sourceTitle: bridgeContext.sourceTitle,
+      createdAt: new Date().toISOString(),
+    },
+    objectives: bridgeContext.objectives,
+    completedTasks: bridgeContext.completedTasks,
+    pendingWork: bridgeContext.pendingWork,
+    decisions: bridgeContext.decisions,
+    preferences: bridgeContext.preferences,
+    codeSnippets: bridgeContext.codeSnippets,
+    files: bridgeContext.files,
+  };
+}
+
 // Functions are available globally in the browser context
 // In Node (vitest), expose them via module.exports for testing
 if (typeof module !== 'undefined' && module.exports) {
@@ -1061,5 +1344,9 @@ if (typeof module !== 'undefined' && module.exports) {
     importBackup,
     mergeStorageData,
     sanitizeForDiagnostics,
+    extractBridgeContext,
+    refineBridgeContextWithAI,
+    generateBridgeMarkdown,
+    generateBridgeJSON,
   };
 }

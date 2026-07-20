@@ -561,6 +561,25 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     return true;
   }
+
+  // Fetch a single conversation's raw data (used by the Bridge page — no
+  // download side effect, just the parsed JSON for context extraction).
+  if (request.action === 'fetchConversationData') {
+    fetchConversation(request.orgId, request.conversationId)
+      .then(data => {
+        if (!data || !data.chat_messages || !Array.isArray(data.chat_messages)) {
+          throw new Error('Invalid conversation data structure. Please refresh the page and try again.');
+        }
+        data.model = inferModel(data);
+        sendResponse({ success: true, data });
+      })
+      .catch(error => {
+        console.error('Fetch conversation data error:', error);
+        sendResponse({ success: false, error: error.message });
+      });
+
+    return true;
+  }
   });
 
 } // End of double-injection guard

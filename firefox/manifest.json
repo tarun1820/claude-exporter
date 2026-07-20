@@ -1,13 +1,14 @@
 {
   "manifest_version": 2,
   "name": "Claude Exporter",
-  "version": "1.10.17",
+  "version": "1.11.0",
   "description": "Export conversations and artifacts from Claude.ai",
   "permissions": [
     "activeTab",
     "storage",
     "tabs",
-    "https://claude.ai/*"
+    "https://claude.ai/*",
+    "https://api.anthropic.com/*"
   ],
   "browser_action": {
     "default_popup": "popup.html",

@@ -67,6 +67,32 @@ document.getElementById('testBtn').addEventListener('click', async () => {
   }
 });
 
+// AI Conversation Bridge settings — API key stored in chrome.storage.local
+// only (never .sync), so it stays on this device and is excluded from
+// backup/diagnostics exports (see backupExtensionData in utils.js).
+function loadBridgeSettings() {
+  chrome.storage.local.get(['bridgeApiKey', 'bridgeDefaultMode'], (result) => {
+    if (result.bridgeApiKey) document.getElementById('bridgeApiKey').value = result.bridgeApiKey;
+    document.getElementById('bridgeDefaultMode').value = result.bridgeDefaultMode || 'coding';
+  });
+}
+loadBridgeSettings();
+
+document.getElementById('saveBridgeBtn').addEventListener('click', () => {
+  const bridgeApiKey = document.getElementById('bridgeApiKey').value.trim();
+  const bridgeDefaultMode = document.getElementById('bridgeDefaultMode').value;
+  chrome.storage.local.set({ bridgeApiKey, bridgeDefaultMode }, () => {
+    showStatus('bridgeStatus', 'Bridge settings saved.', 'success');
+  });
+});
+
+document.getElementById('clearBridgeKeyBtn').addEventListener('click', () => {
+  document.getElementById('bridgeApiKey').value = '';
+  chrome.storage.local.remove('bridgeApiKey', () => {
+    showStatus('bridgeStatus', 'API key cleared.', 'success');
+  });
+});
+
 // Backup all extension data to a file (shared logic lives in utils.js)
 document.getElementById('backupBtn').addEventListener('click', () => {
   backupExtensionData((success, message) => {

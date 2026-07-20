@@ -169,6 +169,32 @@ document.getElementById('exportCurrent').addEventListener('click', async () => {
     }
   });
   
+  // Bridge current conversation to another AI
+  document.getElementById('bridgeCurrent').addEventListener('click', async () => {
+    const button = document.getElementById('bridgeCurrent');
+    button.disabled = true;
+    showStatus('Opening Bridge…', 'info');
+    try {
+      const orgId = await getOrgId();
+      const conversationId = await getCurrentConversationId();
+
+      if (!orgId) {
+        throw new Error('Failed to obtain organization ID: Please set this value in Options.');
+      }
+      if (!conversationId) {
+        throw new Error('Could not detect conversation ID. Make sure you are on a claude.ai conversation page.');
+      }
+
+      const url = chrome.runtime.getURL(`bridge.html?orgId=${encodeURIComponent(orgId)}&conversationId=${encodeURIComponent(conversationId)}`);
+      chrome.tabs.create({ url });
+      showStatus('Bridge opened in a new tab.', 'success');
+    } catch (error) {
+      showStatus(error.message, 'error');
+    } finally {
+      button.disabled = false;
+    }
+  });
+
   // Browse conversations
   document.getElementById('browseConversations').addEventListener('click', () => {
     chrome.tabs.create({ url: chrome.runtime.getURL('browse.html') });
