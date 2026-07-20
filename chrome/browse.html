@@ -12,14 +12,19 @@
       --text-muted: #999999;
       --border-color: #e2e4e9;
       --border-light: #f0f0f0;
-      --primary-color: #5d44e8;
-      --primary-hover: #4a35ba;
-      --secondary-color: #10b981;
-      --secondary-hover: #059669;
+      --primary-color: #6d4de6;
+      --primary-hover: #5638c9;
+      --secondary-color: #0d9488;
+      --secondary-hover: #0f766e;
+      --gradient-primary: linear-gradient(135deg, #4f46e5 0%, #9333ea 55%, #db2777 100%);
+      --gradient-primary-hover: linear-gradient(135deg, #4338ca 0%, #7e22ce 55%, #be185d 100%);
+      --radius-sm: 8px;
+      --radius-md: 10px;
+      --radius-lg: 16px;
       --secondary-bg: #f8f9fa;
       --hover-bg: #f8f9fa;
       --input-border: #dddddd;
-      --input-focus: #5d44e8;
+      --input-focus: #6d4de6;
       --shadow-sm: rgba(0,0,0,0.05);
       --shadow-md: rgba(0,0,0,0.15);
       --error-color: #d32f2f;
@@ -35,8 +40,8 @@
       --modal-overlay: rgba(0,0,0,0.5);
       --progress-bg: #e0e0e0;
       --cancel-btn: #dc3545;
-      --link-hover: #5d44e8;
-      --focus-ring: rgba(93, 68, 232, 0.15);
+      --link-hover: #6d4de6;
+      --focus-ring: rgba(109, 77, 230, 0.2);
       --badge-default: #1d4ed8;
       --badge-sonnet: #ce5c04;
       --badge-haiku: #09923b;
@@ -51,14 +56,19 @@
       --text-muted: #808080;
       --border-color: #2a2a2a;
       --border-light: #333333;
-      --primary-color: #6b52e8;
-      --primary-hover: #7d66f0;
-      --secondary-color: #32b34a;
-      --secondary-hover: #3cc752;
+      --primary-color: #7c6ef2;
+      --primary-hover: #6d5ef0;
+      --secondary-color: #14b8a6;
+      --secondary-hover: #2dd4bf;
+      --gradient-primary: linear-gradient(135deg, #6366f1 0%, #a855f7 55%, #ec4899 100%);
+      --gradient-primary-hover: linear-gradient(135deg, #565af0 0%, #9333ea 55%, #db2777 100%);
+      --radius-sm: 8px;
+      --radius-md: 10px;
+      --radius-lg: 16px;
       --secondary-bg: #2a2a2a;
       --hover-bg: #2a2a2a;
       --input-border: #3a3a3a;
-      --input-focus: #8b7aff;
+      --input-focus: #a78bfa;
       --shadow-sm: rgba(0,0,0,0.3);
       --shadow-md: rgba(0,0,0,0.5);
       --error-color: #ff6b6b;
@@ -74,8 +84,8 @@
       --modal-overlay: rgba(0,0,0,0.7);
       --progress-bg: #3a3a3a;
       --cancel-btn: #e74c3c;
-      --link-hover: #8b7aff;
-      --focus-ring: rgba(107, 82, 232, 0.15);
+      --link-hover: #a78bfa;
+      --focus-ring: rgba(124, 110, 242, 0.25);
       --badge-default: #7ab8f5;
       --badge-sonnet: #ffaa66;
       --badge-haiku: #66cc66;
@@ -89,7 +99,7 @@
     }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI Variable', 'Segoe UI', Roboto, sans-serif;
       background: var(--bg-body);
       color: var(--text-primary);
       line-height: 1.6;
@@ -118,7 +128,12 @@
     }
 
     .header h1 {
-      color: var(--primary-color);
+      background: var(--gradient-primary);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      font-weight: 700;
+      letter-spacing: 0.2px;
       margin: 0;
       flex: 1;
     }
@@ -157,7 +172,7 @@
       left: 0;
       background: var(--bg-card);
       border: 1px solid var(--border-color);
-      border-radius: 8px;
+      border-radius: 12px;
       box-shadow: 0 4px 16px var(--shadow-md);
       min-width: 240px;
       z-index: 1000;
@@ -218,7 +233,7 @@
       left: 100%;
       background: var(--bg-card);
       border: 1px solid var(--border-color);
-      border-radius: 8px;
+      border-radius: 12px;
       box-shadow: 0 4px 16px var(--shadow-md);
       min-width: 140px;
       z-index: 1001;
@@ -291,7 +306,7 @@
     .filter-group select {
       padding: 8px 10px;
       border: 1px solid var(--input-border);
-      border-radius: 6px;
+      border-radius: var(--radius-sm);
       font-size: 13px;
       background: var(--bg-card);
       color: var(--text-primary);
@@ -308,17 +323,19 @@
       font-size: 14px;
       color: var(--text-secondary);
     }
-    
+
     .export-all-btn {
       padding: 10px 20px;
-      background: var(--primary-color);
+      background: var(--gradient-primary);
       color: white;
       border: none;
-      border-radius: 6px;
+      border-radius: var(--radius-md);
       font-size: 13px;
-      font-weight: 500;
+      font-weight: 600;
+      letter-spacing: 0.1px;
       cursor: pointer;
-      transition: background 0.2s;
+      box-shadow: 0 2px 8px var(--shadow-sm);
+      transition: filter 0.15s, box-shadow 0.15s;
     }
 
     #bridgeFilteredBtn {
@@ -327,27 +344,31 @@
 
     #bridgeFilteredBtn:hover:not(:disabled) {
       background: var(--secondary-hover);
+      filter: none;
     }
 
     .export-all-btn:hover {
-      background: var(--primary-hover);
+      filter: brightness(1.08);
+      box-shadow: 0 4px 12px var(--shadow-md);
     }
 
     .export-all-btn:disabled {
       background: var(--disabled-bg);
       color: var(--disabled-text);
       cursor: not-allowed;
+      box-shadow: none;
+      filter: none;
     }
-    
+
     .container {
       max-width: 1600px;
       margin: 20px auto;
       padding: 0 20px;
     }
-    
+
     .conversations-table {
       background: var(--bg-card);
-      border-radius: 8px;
+      border-radius: var(--radius-lg);
       overflow: hidden;
       box-shadow: 0 2px 8px var(--shadow-sm);
     }
@@ -516,7 +537,7 @@
       right: 0;
       background: var(--bg-card);
       border: 1px solid var(--border-color);
-      border-radius: 8px;
+      border-radius: 12px;
       box-shadow: 0 4px 16px var(--shadow-md);
       min-width: 200px;
       z-index: 1000;
@@ -623,7 +644,7 @@
     .btn-small {
       padding: 6px 12px;
       border: none;
-      border-radius: 4px;
+      border-radius: var(--radius-sm);
       font-size: 12px;
       cursor: pointer;
       transition: all 0.2s;
@@ -685,7 +706,7 @@
       right: 20px;
       background: var(--bg-card);
       padding: 15px;
-      border-radius: 8px;
+      border-radius: var(--radius-lg);
       box-shadow: 0 4px 12px var(--shadow-md);
       display: none;
       z-index: 1000;
@@ -947,7 +968,7 @@
       align-items: center;
       padding: 8px 15px;
       background: var(--secondary-bg);
-      border-radius: 5px;
+      border-radius: var(--radius-md);
     }
     .export-row {
       display: flex;
@@ -978,7 +999,7 @@
     .export-settings select {
       padding: 8px 10px;
       border: 1px solid var(--input-border);
-      border-radius: 6px;
+      border-radius: var(--radius-sm);
       font-size: 13px;
       background-color: var(--bg-card);
       color: var(--text-primary);
@@ -999,16 +1020,16 @@
   
   <!-- Progress modal for bulk export -->
   <div id="progressModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--modal-overlay); z-index: 3000;">
-    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--bg-card); padding: 30px; border-radius: 8px; min-width: 400px; color: var(--text-primary);">
+    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--bg-card); padding: 30px; border-radius: var(--radius-lg); min-width: 400px; color: var(--text-primary); box-shadow: 0 8px 32px var(--shadow-md);">
       <h3 style="margin-top: 0; color: var(--text-primary);">Exporting Conversations</h3>
       <div style="margin: 20px 0;">
         <div id="progressText" style="color: var(--text-primary);">Preparing export...</div>
         <div style="background: var(--progress-bg); height: 20px; border-radius: 10px; margin-top: 10px; overflow: hidden;">
-          <div id="progressBar" style="background: var(--primary-color); height: 100%; width: 0%; transition: width 0.3s;"></div>
+          <div id="progressBar" style="background: var(--gradient-primary); height: 100%; width: 0%; transition: width 0.3s;"></div>
         </div>
         <div id="progressStats" style="margin-top: 10px; font-size: 14px; color: var(--text-secondary);"></div>
       </div>
-      <button id="cancelExport" style="padding: 8px 16px; background: var(--cancel-btn); color: white; border: none; border-radius: 4px; cursor: pointer;">Cancel</button>
+      <button id="cancelExport" style="padding: 8px 16px; background: var(--cancel-btn); color: white; border: none; border-radius: var(--radius-sm); cursor: pointer;">Cancel</button>
     </div>
   </div>
   

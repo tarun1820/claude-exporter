@@ -74,15 +74,27 @@ After installing the extension:
 8. Click **Test Connection** to verify it works
 9. You should see a success message if everything is configured correctly!
 
-### Optional: AI Conversation Bridge API key
+### Optional: AI Conversation Bridge API keys (BYOK)
 
-The Bridge's rule-based extraction works with no setup. To enable AI-enhanced extraction:
+The Bridge's rule-based extraction works with no setup at all. To additionally enable **AI-enhanced extraction** — which refines that extraction with a real model call — bring your own API key for whichever provider you already use:
 
-1. Open the extension options page
-2. Under **AI Conversation Bridge**, pick your provider (Anthropic, OpenAI, or Google Gemini) and paste the matching API key
-3. Click **Save Bridge Settings**
+1. Get an API key from your provider of choice:
+   | Provider | Get a key at | Key format |
+   |---|---|---|
+   | **Anthropic (Claude)** | [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys) | starts with `sk-ant-` |
+   | **OpenAI** | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) | starts with `sk-` |
+   | **Google Gemini** | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) | starts with `AIza` |
+2. Open the extension's options page (right-click the extension icon → **Options**, or click the gear icon on the Browse page)
+3. Under **AI Conversation Bridge**:
+   - Set **AI Provider** to whichever one you got a key for
+   - Paste the key into the matching field (Anthropic / OpenAI / Google Gemini — only the one matching your selected provider needs to be filled in)
+   - Optionally set a **Default transfer mode** (Coding / Research / Writing / Brainstorming)
+4. Click **Save Bridge Settings**
+5. On the Bridge page (opened via "Bridge to Another AI" or the Browse page's **Bridge**/**Bridge Filtered** actions), toggle **AI-enhanced extraction** on — it's greyed out until a key is configured for the selected provider
 
-Each key is stored only in this browser (never synced), sent only to that provider's own API, and only used when you explicitly toggle "AI-enhanced extraction" on in the Bridge page. All keys are excluded from backup and diagnostics exports.
+**How it works**: only the currently-selected provider's key is ever read, and it's sent only to that provider's own API (`api.anthropic.com`, `api.openai.com`, or `generativelanguage.googleapis.com`) — never anywhere else, and never automatically. You can save keys for more than one provider and switch the **AI Provider** dropdown any time; each key is remembered independently. All keys are stored only in this browser (never synced) and are excluded from backup and diagnostics exports.
+
+**Cost note**: this is bring-your-own-key — usage is billed by your provider's own account/plan, not by this extension. Each AI-enhanced Bridge refinement is one model call.
 
 ---
 
@@ -119,8 +131,8 @@ If you see this error when trying to export the current conversation:
 - Try removing and re-adding the extension from `chrome://extensions/`
 
 #### AI-enhanced Bridge extraction fails
-- Confirm the API key is saved in Options (Save Bridge Settings, not just typed in)
-- Check the browser console on the Bridge tab for the specific `api.anthropic.com` error (invalid key, rate limit, etc.)
+- Confirm the correct **AI Provider** is selected in Options and that provider's key is saved (Save Bridge Settings, not just typed in)
+- Check the browser console on the Bridge tab for the specific provider API error (invalid key, rate limit, wrong key for the selected provider, etc.) — it'll name the host (`api.anthropic.com`, `api.openai.com`, or `generativelanguage.googleapis.com`)
 - The rule-based (non-AI) extraction still works even if the AI-enhanced pass fails
 
 ---
