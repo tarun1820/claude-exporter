@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.11.1]
+
+- **Repo is now Chrome-only** — removed the `firefox/` folder and all Firefox-specific docs/CI references. `chrome/` is the only extension build going forward; CLAUDE.md, README.md, and docs/INSTALL.md updated accordingly.
+
 ## [1.11.0]
 
 - **New: AI Conversation Bridge** — distills a conversation into a compact handoff package (objectives, completed/pending work, decisions, preferences, code/files) so it can be pasted into a different LLM (ChatGPT, Gemini, another Claude chat) and continued from where it left off, instead of dumping the raw transcript.

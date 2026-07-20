@@ -157,6 +157,10 @@
 
 ## Completed ✅
 
+- **Chrome-only repo** (v1.11.1)
+  - Removed the `firefox/` folder and all Firefox-specific instructions/docs — the extension is Chrome (Manifest V3) only going forward
+  - Updated CLAUDE.md, README.md, docs/INSTALL.md, and `tests/package.json` accordingly
+
 - **AI Conversation Bridge** (v1.11.0)
   - New `bridge.html` page distills a conversation into objectives/decisions/pending-work/preferences/code/files and exports a ready-to-paste Markdown prompt or JSON package for handing off to a different LLM
   - Tier 1 (rule-based, `extractBridgeContext`) works with no API key; Tier 2 (`refineBridgeContextWithAI`) is an optional BYOK Anthropic API call

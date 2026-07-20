@@ -1,6 +1,6 @@
 # Claude Exporter
 
-A browser extension for Chrome and Firefox that allows you to export your Claude.ai conversations and artifacts in various formats with support for bulk exports, artifact extraction, and conversation browsing.
+A Chrome extension that lets you export your Claude.ai conversations and artifacts in various formats, bridge a conversation to a different LLM, and browse/search your full conversation history.
 
 ## Features
 
@@ -16,13 +16,14 @@ A browser extension for Chrome and Firefox that allows you to export your Claude
 - 🏷️ **Metadata Options** - Include or exclude timestamps, models, and other metadata
 - 🤖 **Complete Model Information** - Preserves and displays model information for all conversations
 - 🔮 **Smart Model Inference** - Automatically infers the correct model for conversations that used the default model at the time
-- 🔒 **Secure** - All data processing happens in your browser and is never sent anywhere
+- 🌉 **AI Conversation Bridge** - Distill a conversation into objectives, decisions, pending work, preferences, and code/files, then hand it off to a different LLM (ChatGPT, Gemini, another Claude chat) as a ready-to-paste prompt or JSON package — instead of dumping the raw transcript
+- 🔒 **Secure** - All data processing happens in your browser and is never sent anywhere (the Bridge's optional AI-enhanced mode is opt-in and BYOK — see below)
 - ☀️ **Light/Dark Mode** - Toggle between color schemes
 
 ---
 ### Installation
 
-See [docs/INSTALL.md](docs/INSTALL.md) for installation instructions (browser stores, manual, and from source).
+See [docs/INSTALL.md](docs/INSTALL.md) for installation instructions (Chrome Web Store, manual, and from source).
 
 ---
 ### Usage
@@ -33,6 +34,14 @@ See [docs/INSTALL.md](docs/INSTALL.md) for installation instructions (browser st
 3. Choose your export format and metadata preferences
 4. Click "Export Current Conversation"
 
+#### Bridge a Conversation to Another AI
+1. Navigate to any conversation on claude.ai
+2. Click the extension icon, then **"Bridge to Another AI"** (or use the **Bridge** row action from the Browse page)
+3. A new tab opens with the distilled context — objectives, decisions, pending work, preferences, and code/files — grouped by transfer mode (Coding / Research / Writing / Brainstorming)
+4. Edit any section if needed, then **Copy Markdown Prompt** (paste straight into ChatGPT/Gemini/another Claude chat) or download as Markdown/JSON
+5. Optional: add your own Anthropic API key in Options to enable **AI-enhanced extraction**, which refines the heuristic pass with a real model call. The key is stored only on this device, sent only to `api.anthropic.com`, and only used when you explicitly toggle it on
+6. From the Browse page, use **Bridge Filtered** to merge every currently-filtered conversation (e.g. a project search) into one combined bridge package
+
 #### Browse All Conversations
 1. Click the extension icon
 2. Click "Browse All Conversations" (green button)
@@ -41,8 +50,9 @@ See [docs/INSTALL.md](docs/INSTALL.md) for installation instructions (browser st
    - Filter by model
    - Sort by date or name
    - Export individual conversations
+   - Bridge individual or filtered conversations to another AI
    - Export all filtered conversations as ZIP
-   
+
 #### Bulk Export
 1. In the browse page, select your format and filters
 2. Click "Export All"
@@ -69,6 +79,11 @@ See [docs/INSTALL.md](docs/INSTALL.md) for installation instructions (browser st
 - Shows only the current conversation branch
 - Ideal for copying into other LLMs or text editors
 
+#### AI Conversation Bridge (Markdown prompt / JSON package)
+- Distilled handoff context instead of the raw transcript: objectives, decisions, pending work, preferences, and code/files
+- Markdown output is a ready-to-paste prompt for a different LLM; JSON output is a structured, versioned package (`_meta.bridgeVersion`) for archival or programmatic use
+- Works fully offline by default (rule-based extraction); optionally refined via your own Anthropic API key
+
 ---
 ### Troubleshooting
 
@@ -89,7 +104,7 @@ See [docs/INSTALL.md](docs/INSTALL.md) for installation instructions (browser st
 - Make sure you're using the latest version of the extension
 - Try reloading the extension from chrome://extensions/
 
-**For browser-specific troubleshooting issues**, see [docs/INSTALL.md](docs/INSTALL.md#Troubleshooting)
+**For more troubleshooting**, see [docs/INSTALL.md](docs/INSTALL.md#troubleshooting)
 
 ---
 ### Known Limitations
@@ -101,12 +116,13 @@ See [docs/INSTALL.md](docs/INSTALL.md) for installation instructions (browser st
 - Some special content types (like artifacts) may not export perfectly
 - API does not preserve per-message model data
   - `conversation.model` from the API is the *current* model only — when chats get bounced (deprecation, guardrails kicking to Sonnet 4, etc.) the original model is lost
+- The Bridge's rule-based extraction uses English-language regex heuristics — non-English conversations or unusual phrasing may extract less accurately without the AI-enhanced pass
 
 ---
 ### Privacy & Security
 
 - **Local Processing**: All data processing happens in your browser
-- **No External Servers**: The extension doesn't send data anywhere
+- **No External Servers**: The extension doesn't send data anywhere, except the AI Conversation Bridge's optional AI-enhanced mode, which sends conversation context to `api.anthropic.com` using your own API key — only when you explicitly enable it
 - **Your Authentication**: Uses your existing Claude.ai session
 - **Open Source**: You can review all code before installation
 
