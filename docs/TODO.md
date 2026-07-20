@@ -157,6 +157,13 @@
 
 ## Completed ✅
 
+- **Unified visual design across Popup, Browse, Bridge, Options** (v1.12.1)
+  - One canonical set of CSS variable names (`--bg-body`, `--bg-card`, `--text-primary`, etc.) across all four pages, replacing four drifted naming schemes
+  - One canonical brand purple (`#5d44e8`/`#6b52e8`) — options.html's stray `#5436DA` corrected to match the other three pages
+  - **Fixed real bug**: options.html previously only followed the OS-level dark/light preference and could not respond to the manual toggle used everywhere else. Now uses the same `:root`(dark default)/`:root[data-theme="light"]` + `popup-theme.js` mechanism as popup.html/bridge.html
+  - Unified button system (primary/secondary/small tiers, consistent disabled state), form control scale (compact for popup's 275px width, standard elsewhere), a shared `--focus-ring` token (fixes two hardcoded-rgba focus-ring bugs), consistent status/toast coloring, and bordered-card sections everywhere
+  - Follow-up not included in this pass: `chrome/content.css` (the floating button injected onto claude.ai) still hardcodes the old `#5436DA`/`#4329B8` purple — should be updated to the canonical `#5d44e8`/`#4a35ba` for full brand consistency, tracked separately since it's a different file/testing surface
+
 - **Multi-organization account fixes** (v1.12.0)
   - Root cause: `detectOrgId` in `chrome/content.js` picked the first chat-capable org via `Array.find`, silently locking onto the wrong org for accounts belonging to more than one (personal + Team workspace, etc.) — causing "always 14 conversations" (that org's default page) and 404s exporting/bridging a conversation owned by a different org
   - `fetchAllConversations` now paginates (`limit`/`offset`) with a safety guard against an unrecognized param scheme

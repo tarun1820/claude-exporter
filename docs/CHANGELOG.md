@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.12.1]
+
+- **Unified visual design across Popup, Browse, Bridge, and Options.** The four pages had drifted into separate CSS variable naming schemes, three different "brand purple" values, and inconsistent button/input/status styling. All four now share one canonical token set, one brand purple, one button/form/status spec, and bordered-card sections.
+  - Fixed a real bug along the way: Options previously only followed the OS-level dark/light preference and couldn't respond to the manual toggle used on Popup/Browse/Bridge — it now uses the same `popup-theme.js`-driven mechanism as the other three pages.
+  - Also fixed two hardcoded (non-themed) focus-ring colors on Options and Browse's search box, replaced with a shared `--focus-ring` token.
+  - Follow-up noted in `docs/TODO.md`: `content.css`'s floating button still uses the old purple value, left out of this pass.
+
 ## [1.12.0]
 
 - **Fixed: multi-organization accounts only ever saw one org's conversations, and 404s on export/bridge.** If your Claude.ai account belongs to more than one organization (e.g. a personal account plus a Team workspace), the extension previously auto-detected and locked onto whichever org the API listed first — silently truncating "Browse"/"Export All" to that org's conversations only (often exactly the 14-conversation default page), and 404ing with "Is your Organization ID correct?" whenever you tried to export/bridge a conversation that actually belonged to a different org.
