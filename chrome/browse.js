@@ -1199,9 +1199,10 @@ function showError(message) {
 function showToast(message, isError = false) {
   const toast = document.getElementById('toast');
   toast.textContent = message;
-  toast.style.background = isError ? '#d32f2f' : '#333';
+  toast.classList.remove('success', 'error', 'info');
+  if (isError) toast.classList.add('error');
   toast.classList.add('show');
-  
+
   setTimeout(() => {
     toast.classList.remove('show');
   }, 3000);

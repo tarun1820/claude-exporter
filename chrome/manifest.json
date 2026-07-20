@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "Claude Exporter",
-    "version": "1.12.0",
+    "version": "1.13.0",
     "description": "Export conversations and artifacts from Claude.ai",
       "permissions": [
     "activeTab",
@@ -11,7 +11,9 @@
   ],
     "host_permissions": [
       "https://claude.ai/*",
-      "https://api.anthropic.com/*"
+      "https://api.anthropic.com/*",
+      "https://api.openai.com/*",
+      "https://generativelanguage.googleapis.com/*"
     ],
     "action": {
       "default_popup": "popup.html",

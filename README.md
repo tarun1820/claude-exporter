@@ -39,7 +39,7 @@ See [docs/INSTALL.md](docs/INSTALL.md) for installation instructions (Chrome Web
 2. Click the extension icon, then **"Bridge to Another AI"** (or use the **Bridge** row action from the Browse page)
 3. A new tab opens with the distilled context — objectives, decisions, pending work, preferences, and code/files — grouped by transfer mode (Coding / Research / Writing / Brainstorming)
 4. Edit any section if needed, then **Copy Markdown Prompt** (paste straight into ChatGPT/Gemini/another Claude chat) or download as Markdown/JSON
-5. Optional: add your own Anthropic API key in Options to enable **AI-enhanced extraction**, which refines the heuristic pass with a real model call. The key is stored only on this device, sent only to `api.anthropic.com`, and only used when you explicitly toggle it on
+5. Optional: pick a provider (Anthropic, OpenAI, or Google Gemini) and add your own API key for it in Options to enable **AI-enhanced extraction**, which refines the heuristic pass with a real model call. The key is stored only on this device, sent only to that provider's own API, and only used when you explicitly toggle it on
 6. From the Browse page, use **Bridge Filtered** to merge every currently-filtered conversation (e.g. a project search) into one combined bridge package
 
 #### Browse All Conversations
@@ -82,7 +82,7 @@ See [docs/INSTALL.md](docs/INSTALL.md) for installation instructions (Chrome Web
 #### AI Conversation Bridge (Markdown prompt / JSON package)
 - Distilled handoff context instead of the raw transcript: objectives, decisions, pending work, preferences, and code/files
 - Markdown output is a ready-to-paste prompt for a different LLM; JSON output is a structured, versioned package (`_meta.bridgeVersion`) for archival or programmatic use
-- Works fully offline by default (rule-based extraction); optionally refined via your own Anthropic API key
+- Works fully offline by default (rule-based extraction); optionally refined via your own API key for Anthropic, OpenAI, or Google Gemini
 
 ---
 ### Troubleshooting
@@ -122,7 +122,7 @@ See [docs/INSTALL.md](docs/INSTALL.md) for installation instructions (Chrome Web
 ### Privacy & Security
 
 - **Local Processing**: All data processing happens in your browser
-- **No External Servers**: The extension doesn't send data anywhere, except the AI Conversation Bridge's optional AI-enhanced mode, which sends conversation context to `api.anthropic.com` using your own API key — only when you explicitly enable it
+- **No External Servers**: The extension doesn't send data anywhere, except the AI Conversation Bridge's optional AI-enhanced mode, which sends conversation context to your chosen provider's API (Anthropic, OpenAI, or Google Gemini) using your own API key — only when you explicitly enable it
 - **Your Authentication**: Uses your existing Claude.ai session
 - **Open Source**: You can review all code before installation
 
@@ -135,6 +135,7 @@ Feel free to submit issues or pull requests if you find bugs or have suggestions
 ### Acknowledgments
 
 - **Original Project**: Forked from [socketteer/Claude-Conversation-Exporter](https://github.com/socketteer/Claude-Conversation-Exporter)
+- **Built by**: Prompt & Pray
 - **Code Development**: Written in collaboration with Claude Code (Sonnet 4.5 and Opus 4.5, 4.6, 4.7)
 - **ZIP Library**: Uses [JSZip](https://stuk.github.io/jszip/) for creating ZIP archives
 

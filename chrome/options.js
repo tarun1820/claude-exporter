@@ -67,29 +67,51 @@ document.getElementById('testBtn').addEventListener('click', async () => {
   }
 });
 
-// AI Conversation Bridge settings — API key stored in chrome.storage.local
-// only (never .sync), so it stays on this device and is excluded from
-// backup/diagnostics exports (see backupExtensionData in utils.js).
+// AI Conversation Bridge settings — one API key per provider, stored in
+// chrome.storage.local only (never .sync), so they stay on this device and
+// are excluded from backup/diagnostics exports (see backupExtensionData in
+// utils.js). Only the currently-selected provider's key is ever read when
+// the Bridge page runs AI-enhanced extraction.
+const BRIDGE_KEY_FIELDS = {
+  anthropic: 'bridgeApiKeyAnthropic',
+  openai: 'bridgeApiKeyOpenAI',
+  gemini: 'bridgeApiKeyGemini',
+};
+
 function loadBridgeSettings() {
-  chrome.storage.local.get(['bridgeApiKey', 'bridgeDefaultMode'], (result) => {
-    if (result.bridgeApiKey) document.getElementById('bridgeApiKey').value = result.bridgeApiKey;
-    document.getElementById('bridgeDefaultMode').value = result.bridgeDefaultMode || 'coding';
-  });
+  chrome.storage.local.get(
+    ['bridgeProvider', 'bridgeApiKeyAnthropic', 'bridgeApiKeyOpenAI', 'bridgeApiKeyGemini', 'bridgeDefaultMode'],
+    (result) => {
+      document.getElementById('bridgeProvider').value = result.bridgeProvider || 'anthropic';
+      if (result.bridgeApiKeyAnthropic) document.getElementById('bridgeApiKeyAnthropic').value = result.bridgeApiKeyAnthropic;
+      if (result.bridgeApiKeyOpenAI) document.getElementById('bridgeApiKeyOpenAI').value = result.bridgeApiKeyOpenAI;
+      if (result.bridgeApiKeyGemini) document.getElementById('bridgeApiKeyGemini').value = result.bridgeApiKeyGemini;
+      document.getElementById('bridgeDefaultMode').value = result.bridgeDefaultMode || 'coding';
+    }
+  );
 }
 loadBridgeSettings();
 
 document.getElementById('saveBridgeBtn').addEventListener('click', () => {
-  const bridgeApiKey = document.getElementById('bridgeApiKey').value.trim();
+  const bridgeProvider = document.getElementById('bridgeProvider').value;
+  const bridgeApiKeyAnthropic = document.getElementById('bridgeApiKeyAnthropic').value.trim();
+  const bridgeApiKeyOpenAI = document.getElementById('bridgeApiKeyOpenAI').value.trim();
+  const bridgeApiKeyGemini = document.getElementById('bridgeApiKeyGemini').value.trim();
   const bridgeDefaultMode = document.getElementById('bridgeDefaultMode').value;
-  chrome.storage.local.set({ bridgeApiKey, bridgeDefaultMode }, () => {
-    showStatus('bridgeStatus', 'Bridge settings saved.', 'success');
-  });
+  chrome.storage.local.set(
+    { bridgeProvider, bridgeApiKeyAnthropic, bridgeApiKeyOpenAI, bridgeApiKeyGemini, bridgeDefaultMode },
+    () => {
+      showStatus('bridgeStatus', 'Bridge settings saved.', 'success');
+    }
+  );
 });
 
 document.getElementById('clearBridgeKeyBtn').addEventListener('click', () => {
-  document.getElementById('bridgeApiKey').value = '';
-  chrome.storage.local.remove('bridgeApiKey', () => {
-    showStatus('bridgeStatus', 'API key cleared.', 'success');
+  const provider = document.getElementById('bridgeProvider').value;
+  const field = BRIDGE_KEY_FIELDS[provider];
+  document.getElementById(field).value = '';
+  chrome.storage.local.remove(field, () => {
+    showStatus('bridgeStatus', `${document.getElementById('bridgeProvider').selectedOptions[0].textContent} key cleared.`, 'success');
   });
 });
 

@@ -14,6 +14,8 @@
       --border-light: #f0f0f0;
       --primary-color: #5d44e8;
       --primary-hover: #4a35ba;
+      --secondary-color: #10b981;
+      --secondary-hover: #059669;
       --secondary-bg: #f8f9fa;
       --hover-bg: #f8f9fa;
       --input-border: #dddddd;
@@ -21,6 +23,12 @@
       --shadow-sm: rgba(0,0,0,0.05);
       --shadow-md: rgba(0,0,0,0.15);
       --error-color: #d32f2f;
+      --success-bg: #d1fae5;
+      --success-text: #065f46;
+      --error-bg: #fee2e2;
+      --error-text: #991b1b;
+      --info-bg: #e0f2fe;
+      --info-text: #075985;
       --disabled-bg: #cccccc;
       --disabled-text: #999999;
       --toast-bg: #333333;
@@ -28,42 +36,11 @@
       --progress-bg: #e0e0e0;
       --cancel-btn: #dc3545;
       --link-hover: #5d44e8;
+      --focus-ring: rgba(93, 68, 232, 0.15);
       --badge-default: #1d4ed8;
       --badge-sonnet: #ce5c04;
       --badge-haiku: #09923b;
       --badge-opus: #7c3aed;
-    }
-
-    @media (prefers-color-scheme: dark) {
-      :root:not([data-theme="light"]) {
-        --bg-body: #121212;
-        --bg-card: #1e1e1e;
-        --text-primary: #e0e0e0;
-        --text-secondary: #b0b0b0;
-        --text-muted: #808080;
-        --border-color: #2a2a2a;
-        --border-light: #333333;
-        --primary-color: #6b52e8;
-        --primary-hover: #7d66f0;
-        --secondary-bg: #2a2a2a;
-        --hover-bg: #2a2a2a;
-        --input-border: #3a3a3a;
-        --input-focus: #8b7aff;
-        --shadow-sm: rgba(0,0,0,0.3);
-        --shadow-md: rgba(0,0,0,0.5);
-        --error-color: #ff6b6b;
-        --disabled-bg: #3a3a3a;
-        --disabled-text: #666666;
-        --toast-bg: #2a2a2a;
-        --modal-overlay: rgba(0,0,0,0.7);
-        --progress-bg: #3a3a3a;
-        --cancel-btn: #e74c3c;
-        --link-hover: #8b7aff;
-        --badge-default: #7ab8f5;
-        --badge-sonnet: #ffaa66;
-        --badge-haiku: #66cc66;
-        --badge-opus: #c084cc;
-      }
     }
 
     :root[data-theme="dark"] {
@@ -76,6 +53,8 @@
       --border-light: #333333;
       --primary-color: #6b52e8;
       --primary-hover: #7d66f0;
+      --secondary-color: #32b34a;
+      --secondary-hover: #3cc752;
       --secondary-bg: #2a2a2a;
       --hover-bg: #2a2a2a;
       --input-border: #3a3a3a;
@@ -83,6 +62,12 @@
       --shadow-sm: rgba(0,0,0,0.3);
       --shadow-md: rgba(0,0,0,0.5);
       --error-color: #ff6b6b;
+      --success-bg: #1a4d2e;
+      --success-text: #90ee90;
+      --error-bg: #4d1a1a;
+      --error-text: #ff9999;
+      --info-bg: #1a3d4d;
+      --info-text: #87ceeb;
       --disabled-bg: #3a3a3a;
       --disabled-text: #666666;
       --toast-bg: #2a2a2a;
@@ -90,6 +75,7 @@
       --progress-bg: #3a3a3a;
       --cancel-btn: #e74c3c;
       --link-hover: #8b7aff;
+      --focus-ring: rgba(107, 82, 232, 0.15);
       --badge-default: #7ab8f5;
       --badge-sonnet: #ffaa66;
       --badge-haiku: #66cc66;
@@ -271,7 +257,7 @@
     .search-box input:focus {
       outline: none;
       border-color: var(--input-focus);
-      box-shadow: 0 0 0 3px rgba(107, 82, 232, 0.15);
+      box-shadow: 0 0 0 3px var(--focus-ring);
     }
 
     .search-box .clear-btn {
@@ -303,13 +289,19 @@
     }
 
     .filter-group select {
-      padding: 8px 12px;
+      padding: 8px 10px;
       border: 1px solid var(--input-border);
-      border-radius: 5px;
-      font-size: 14px;
+      border-radius: 6px;
+      font-size: 13px;
       background: var(--bg-card);
       color: var(--text-primary);
       cursor: pointer;
+    }
+
+    .filter-group select:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 2px var(--focus-ring);
     }
 
     .stats {
@@ -322,10 +314,19 @@
       background: var(--primary-color);
       color: white;
       border: none;
-      border-radius: 5px;
-      font-size: 14px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
       cursor: pointer;
       transition: background 0.2s;
+    }
+
+    #bridgeFilteredBtn {
+      background: var(--secondary-color);
+    }
+
+    #bridgeFilteredBtn:hover:not(:disabled) {
+      background: var(--secondary-hover);
     }
 
     .export-all-btn:hover {
@@ -616,6 +617,7 @@
       height: 18px;
       vertical-align: middle;
       margin: 0;
+      accent-color: var(--primary-color);
     }
     
     .btn-small {
@@ -718,7 +720,11 @@
       display: none;
       box-shadow: 0 4px 12px var(--shadow-md);
     }
-    
+
+    .toast.success { background: var(--success-bg); color: var(--success-text); }
+    .toast.error { background: var(--error-bg); color: var(--error-text); }
+    .toast.info { background: var(--info-bg); color: var(--info-text); }
+
     .toast.show {
       display: block;
       animation: slideUp 0.3s ease;
@@ -970,12 +976,22 @@
       white-space: nowrap;
     }
     .export-settings select {
-      padding: 4px 8px;
+      padding: 8px 10px;
       border: 1px solid var(--input-border);
-      border-radius: 3px;
+      border-radius: 6px;
       font-size: 13px;
       background-color: var(--bg-card);
       color: var(--text-primary);
+    }
+    .export-settings select:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 2px var(--focus-ring);
+    }
+    .export-settings input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--primary-color);
     }
   </style>
   
