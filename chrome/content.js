@@ -92,30 +92,146 @@ function getLocalDateTimeString() {
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch conversation: ${response.status}`);
+      const error = new Error(`Failed to fetch conversation: ${response.status}`);
+      error.status = response.status;
+      throw error;
     }
 
     return await response.json();
   }
-  
-  // Fetch all conversations
+
+  // Fetch every chat_conversations page for one org, following pagination via
+  // limit/offset. Some accounts only ever see the API's default page (~14
+  // items) because the endpoint was previously called with no params at all.
+  // Guarded so a wrong param name (this API is undocumented) can't regress
+  // below today's single-page behavior or loop forever: stop as soon as a
+  // page comes back shorter than the requested limit, or repeats the same
+  // leading UUID as the previous page (a sign the params were ignored).
   async function fetchAllConversations(orgId) {
-    const url = `https://claude.ai/api/organizations/${orgId}/chat_conversations`;
-    
-    const response = await fetch(url, {
-      credentials: 'include',
-      headers: {
-        'Accept': 'application/json',
+    const limit = 100;
+    let offset = 0;
+    let all = [];
+    let previousFirstUuid = null;
+
+    for (let page = 0; page < 50; page++) {
+      const url = `https://claude.ai/api/organizations/${orgId}/chat_conversations?limit=${limit}&offset=${offset}`;
+
+      const response = await fetch(url, {
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json',
+        }
+      });
+
+      if (!response.ok) {
+        const error = new Error(`Failed to fetch conversations: ${response.status}`);
+        error.status = response.status;
+        throw error;
       }
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Failed to fetch conversations: ${response.status}`);
+
+      const pageConversations = await response.json();
+      if (!Array.isArray(pageConversations) || pageConversations.length === 0) break;
+
+      const firstUuid = pageConversations[0].uuid;
+      if (firstUuid && firstUuid === previousFirstUuid) {
+        // Same leading conversation as last time — the API ignored our
+        // limit/offset params. Stop here rather than looping forever.
+        break;
+      }
+      previousFirstUuid = firstUuid;
+
+      all = all.concat(pageConversations);
+
+      if (pageConversations.length < limit) break; // last page
+      offset += limit;
     }
 
-    const conversations = await response.json();
-    recordModelSnapshots(conversations); // capture current models before any bounce
-    return conversations;
+    recordModelSnapshots(all); // capture current models before any bounce
+    return all;
+  }
+
+  // List every organization this account can chat in. Falls back to every
+  // org (not just chat-capable ones) if none report 'chat' capability, same
+  // fallback the original single-org detectOrgId used.
+  async function fetchChatCapableOrgs() {
+    const response = await fetch('https://claude.ai/api/organizations', {
+      credentials: 'include',
+      headers: { 'Accept': 'application/json' }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch organizations: ${response.status}`);
+    }
+
+    const orgs = await response.json();
+    if (!Array.isArray(orgs) || orgs.length === 0) {
+      throw new Error('No organizations found');
+    }
+
+    const chatOrgs = orgs.filter(org => org.capabilities && org.capabilities.includes('chat'));
+    return chatOrgs.length > 0 ? chatOrgs : orgs;
+  }
+
+  // Fetch conversations across every organization the account belongs to —
+  // accounts with more than one org (e.g. a personal account plus a Team
+  // workspace) otherwise only ever see whichever org auto-detect happens to
+  // pick first. Each conversation is tagged with the org it came from so
+  // later per-conversation actions (export, bridge) know which org to use.
+  async function fetchAllConversationsAllOrgs() {
+    const orgs = await fetchChatCapableOrgs();
+    const merged = [];
+    const seen = new Set();
+
+    for (const org of orgs) {
+      let conversations;
+      try {
+        conversations = await fetchAllConversations(org.uuid);
+      } catch (error) {
+        console.warn(`Skipping org ${org.uuid} while listing conversations:`, error.message);
+        continue;
+      }
+      for (const conv of conversations) {
+        if (seen.has(conv.uuid)) continue;
+        seen.add(conv.uuid);
+        conv._orgId = org.uuid;
+        merged.push(conv);
+      }
+    }
+
+    return merged;
+  }
+
+  // Fetch a single conversation, trying the preferred org first (the fast
+  // path — no extra requests for single-org accounts) and falling back to
+  // every other chat-capable org on a 404 (the preferred org simply doesn't
+  // have this conversation, most often because the account belongs to more
+  // than one org). Returns { data, orgId } so callers can remember whichever
+  // org actually worked.
+  async function fetchConversationAnyOrg(preferredOrgId, conversationId) {
+    if (preferredOrgId) {
+      try {
+        const data = await fetchConversation(preferredOrgId, conversationId);
+        return { data, orgId: preferredOrgId };
+      } catch (error) {
+        if (error.status !== 404) throw error;
+        console.log(`Conversation not found in org ${preferredOrgId}, trying other organizations...`);
+      }
+    }
+
+    const orgs = await fetchChatCapableOrgs();
+    let lastError = null;
+    for (const org of orgs) {
+      if (org.uuid === preferredOrgId) continue;
+      try {
+        const data = await fetchConversation(org.uuid, conversationId);
+        return { data, orgId: org.uuid };
+      } catch (error) {
+        lastError = error;
+        if (error.status !== 404) throw error;
+      }
+    }
+
+    throw lastError || new Error('Conversation not found in any organization.');
   }
   // Handle messages from popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -123,28 +239,15 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'detectOrgId') {
     console.log('Auto-detecting organization ID...');
 
-    fetch('https://claude.ai/api/organizations', {
-      credentials: 'include',
-      headers: { 'Accept': 'application/json' }
-    })
-      .then(response => {
-        if (!response.ok) {
-          throw new Error(`Failed to fetch organizations: ${response.status}`);
-        }
-        return response.json();
-      })
+    fetchChatCapableOrgs()
       .then(orgs => {
-        if (Array.isArray(orgs) && orgs.length > 0) {
-          // Find the org with "chat" capability (the Claude.ai org, not the API org)
-          const chatOrg = orgs.find(org =>
-            org.capabilities && org.capabilities.includes('chat')
-          );
-          const orgId = chatOrg ? chatOrg.uuid : orgs[0].uuid;
-          console.log('Auto-detected organization ID:', orgId, chatOrg ? '(chat org)' : '(fallback to first)');
-          sendResponse({ success: true, orgId });
-        } else {
-          throw new Error('No organizations found');
-        }
+        // Picking orgs[0] here is just a starting-point guess for accounts
+        // with multiple chat-capable orgs — fetchConversationAnyOrg and
+        // fetchAllConversationsAllOrgs are what actually cover every org, so
+        // a wrong first guess here no longer causes a 404 or a truncated list.
+        const orgId = orgs[0].uuid;
+        console.log('Auto-detected organization ID:', orgId, orgs.length > 1 ? `(1 of ${orgs.length} chat-capable orgs)` : '');
+        sendResponse({ success: true, orgId });
       })
       .catch(error => {
         console.error('Auto-detect org ID failed:', error);
@@ -157,8 +260,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'exportConversation') {
     console.log('Export conversation request received:', request);
 
-    fetchConversation(request.orgId, request.conversationId)
-      .then(data => {
+    let resolvedOrgId = request.orgId;
+    fetchConversationAnyOrg(request.orgId, request.conversationId)
+      .then(({ data, orgId }) => {
+        resolvedOrgId = orgId;
         console.log('Conversation data fetched successfully:', data);
 
         // Validate conversation data structure
@@ -237,7 +342,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
             console.log(`Downloading ZIP with conversation and ${artifactFiles.length} artifact(s)`);
             recordExportTimestamp(request.conversationId);
-            sendResponse({ success: true });
+            sendResponse({ success: true, resolvedOrgId });
           } else {
             // No artifacts found, just export conversation normally
             let content, filename, type;
@@ -260,7 +365,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             console.log('No artifacts found. Downloading file:', filename);
             downloadFile(content, filename, type);
             recordExportTimestamp(request.conversationId);
-            sendResponse({ success: true });
+            sendResponse({ success: true, resolvedOrgId });
           }
         } else {
           // Normal export without artifact extraction
@@ -293,7 +398,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             console.log('Downloading file:', filename);
             downloadFile(content, filename, type);
             recordExportTimestamp(request.conversationId);
-            sendResponse({ success: true });
+            sendResponse({ success: true, resolvedOrgId });
           }
         }
       })
@@ -312,10 +417,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       if (request.action === 'exportAllConversations') {
     console.log('Export all conversations request received:', request);
     
-    fetchAllConversations(request.orgId)
+    fetchAllConversationsAllOrgs()
       .then(async conversations => {
         console.log(`Fetched ${conversations.length} conversations`);
-        
+
         if (request.extractArtifacts || request.flattenArtifacts) {
           // When extracting artifacts (nested or flat), always create a ZIP
           const zip = new JSZip();
@@ -327,7 +432,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             try {
               processed++;
               console.log(`Scanning conversation ${processed}/${conversations.length}: ${conv.name || conv.uuid}`);
-              const fullConv = await fetchConversation(request.orgId, conv.uuid);
+              const fullConv = await fetchConversation(conv._orgId || request.orgId, conv.uuid);
 
               // Infer model if null
               fullConv.model = inferModel(fullConv);
@@ -444,7 +549,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           for (const conv of conversations) {
             try {
               console.log(`Fetching full conversation ${count + 1}/${conversations.length}: ${conv.uuid}`);
-              const fullConv = await fetchConversation(request.orgId, conv.uuid);
+              const fullConv = await fetchConversation(conv._orgId || request.orgId, conv.uuid);
 
               // Infer model if null
               fullConv.model = inferModel(fullConv);
@@ -519,7 +624,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'loadConversations') {
     console.log('Load conversations request received from browse page');
 
-    fetchAllConversations(request.orgId)
+    fetchAllConversationsAllOrgs()
       .then(conversations => {
         sendResponse({ success: true, conversations: conversations });
       })
@@ -534,22 +639,38 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
 
-  // Handle loadProjects request from browse page
+  // Handle loadProjects request from browse page — projects are org-scoped,
+  // so fetch across every chat-capable org and tag each with its org, same
+  // as fetchAllConversationsAllOrgs.
   if (request.action === 'loadProjects') {
     console.log('Load projects request received from browse page');
 
-    fetch(`https://claude.ai/api/organizations/${request.orgId}/projects`, {
-      credentials: 'include',
-      headers: { 'Accept': 'application/json' }
-    })
-      .then(response => {
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
+    fetchChatCapableOrgs()
+      .then(async orgs => {
+        const merged = [];
+        const seen = new Set();
+        for (const org of orgs) {
+          let projects;
+          try {
+            const response = await fetch(`https://claude.ai/api/organizations/${org.uuid}/projects`, {
+              credentials: 'include',
+              headers: { 'Accept': 'application/json' }
+            });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            projects = await response.json();
+          } catch (error) {
+            console.warn(`Skipping org ${org.uuid} while listing projects:`, error.message);
+            continue;
+          }
+          for (const project of projects) {
+            const projectId = project.uuid || project.id;
+            if (seen.has(projectId)) continue;
+            seen.add(projectId);
+            project._orgId = org.uuid;
+            merged.push(project);
+          }
         }
-        return response.json();
-      })
-      .then(projects => {
-        sendResponse({ success: true, projects: projects });
+        sendResponse({ success: true, projects: merged });
       })
       .catch(error => {
         console.error('Load projects error:', error);
@@ -565,13 +686,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   // Fetch a single conversation's raw data (used by the Bridge page — no
   // download side effect, just the parsed JSON for context extraction).
   if (request.action === 'fetchConversationData') {
-    fetchConversation(request.orgId, request.conversationId)
-      .then(data => {
+    fetchConversationAnyOrg(request.orgId, request.conversationId)
+      .then(({ data, orgId }) => {
         if (!data || !data.chat_messages || !Array.isArray(data.chat_messages)) {
           throw new Error('Invalid conversation data structure. Please refresh the page and try again.');
         }
         data.model = inferModel(data);
-        sendResponse({ success: true, data });
+        sendResponse({ success: true, data, resolvedOrgId: orgId });
       })
       .catch(error => {
         console.error('Fetch conversation data error:', error);
