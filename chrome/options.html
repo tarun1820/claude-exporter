@@ -266,6 +266,9 @@
       margin-top: 5px;
       font-style: italic;
     }
+    .provider-fields.hidden {
+      display: none;
+    }
     .section h3 {
       color: var(--text-primary);
       margin-top: 0px;
@@ -310,19 +313,40 @@
 
   <div class="section">
     <h3>AI Conversation Bridge</h3>
-    <p>Optional: bring your own API key for Anthropic, OpenAI, or Google Gemini to enable AI-enhanced context extraction when bridging a conversation to another LLM. Pick which provider to use below — only that provider's key is ever read or sent, only to that provider's own API, and only when you explicitly enable "AI-enhanced extraction" on the Bridge page (never automatically). All keys are excluded from backup and diagnostics exports.</p>
+    <p>Optional: bring your own API key for Anthropic, OpenAI, or Google Gemini — or point at a model running entirely on your own machine via Ollama — to enable AI-enhanced context extraction when bridging a conversation to another LLM. Pick which provider to use below; only the fields for the selected provider are used, only that provider's own API is ever contacted, and only when you explicitly enable "AI-enhanced extraction" on the Bridge page (never automatically). All keys are excluded from backup and diagnostics exports.</p>
     <label for="bridgeProvider">AI Provider</label>
     <select id="bridgeProvider">
       <option value="anthropic">Anthropic (Claude)</option>
       <option value="openai">OpenAI</option>
       <option value="gemini">Google Gemini</option>
+      <option value="local">Local (Ollama)</option>
     </select>
-    <label for="bridgeApiKeyAnthropic" style="margin-top: 12px;">Anthropic API key</label>
-    <input type="text" id="bridgeApiKeyAnthropic" placeholder="sk-ant-...">
-    <label for="bridgeApiKeyOpenAI" style="margin-top: 12px;">OpenAI API key</label>
-    <input type="text" id="bridgeApiKeyOpenAI" placeholder="sk-...">
-    <label for="bridgeApiKeyGemini" style="margin-top: 12px;">Google Gemini API key</label>
-    <input type="text" id="bridgeApiKeyGemini" placeholder="AIza...">
+
+    <div class="provider-fields" data-provider="anthropic">
+      <label for="bridgeApiKeyAnthropic" style="margin-top: 12px;">Anthropic API key</label>
+      <input type="text" id="bridgeApiKeyAnthropic" placeholder="sk-ant-...">
+    </div>
+
+    <div class="provider-fields" data-provider="openai">
+      <label for="bridgeApiKeyOpenAI" style="margin-top: 12px;">OpenAI API key</label>
+      <input type="text" id="bridgeApiKeyOpenAI" placeholder="sk-...">
+    </div>
+
+    <div class="provider-fields" data-provider="gemini">
+      <label for="bridgeApiKeyGemini" style="margin-top: 12px;">Google Gemini API key</label>
+      <input type="text" id="bridgeApiKeyGemini" placeholder="AIza...">
+    </div>
+
+    <div class="provider-fields" data-provider="local">
+      <label for="bridgeLocalBaseUrl" style="margin-top: 12px;">Ollama server URL</label>
+      <input type="text" id="bridgeLocalBaseUrl" placeholder="http://localhost:11434">
+      <label for="bridgeLocalModel" style="margin-top: 12px;">Model name</label>
+      <input type="text" id="bridgeLocalModel" placeholder="llama3.1">
+      <label for="bridgeApiKeyLocal" style="margin-top: 12px;">API key (optional)</label>
+      <input type="text" id="bridgeApiKeyLocal" placeholder="only if your server requires one">
+      <div class="example">Runs entirely on your machine — nothing leaves it. Requires Ollama to be started with CORS allowed for this extension (see docs/INSTALL.md).</div>
+    </div>
+
     <label for="bridgeDefaultMode" style="margin-top: 12px;">Default transfer mode</label>
     <select id="bridgeDefaultMode">
       <option value="coding">Coding</option>

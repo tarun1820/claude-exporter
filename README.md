@@ -39,7 +39,7 @@ See [docs/INSTALL.md](docs/INSTALL.md) for installation instructions (Chrome Web
 2. Click the extension icon, then **"Bridge to Another AI"** (or use the **Bridge** row action from the Browse page)
 3. A new tab opens with the distilled context — objectives, decisions, pending work, preferences, and code/files — grouped by transfer mode (Coding / Research / Writing / Brainstorming)
 4. Edit any section if needed, then **Copy Markdown Prompt** (paste straight into ChatGPT/Gemini/another Claude chat) or download as Markdown/JSON
-5. Optional: pick a provider (Anthropic, OpenAI, or Google Gemini) and add your own API key for it in Options to enable **AI-enhanced extraction**, which refines the heuristic pass with a real model call. The key is stored only on this device, sent only to that provider's own API, and only used when you explicitly toggle it on. See [docs/INSTALL.md](docs/INSTALL.md#optional-ai-conversation-bridge-api-keys-byok) for where to get a key for each provider
+5. Optional: pick a provider (Anthropic, OpenAI, Google Gemini, or a local Ollama model) and add your own API key (or Ollama server details) for it in Options to enable **AI-enhanced extraction**, which refines the heuristic pass with a real model call. Only the selected provider's fields show — the rest stay hidden. Cloud keys are stored only on this device, sent only to that provider's own API, and only used when you explicitly toggle it on; the local option never leaves your machine at all. See [docs/INSTALL.md](docs/INSTALL.md#optional-ai-conversation-bridge-api-keys-byok) for where to get a key for each provider, including local Ollama setup
 6. From the Browse page, use **Bridge Filtered** to merge every currently-filtered conversation (e.g. a project search) into one combined bridge package
 
 #### Browse All Conversations
@@ -82,7 +82,7 @@ See [docs/INSTALL.md](docs/INSTALL.md) for installation instructions (Chrome Web
 #### AI Conversation Bridge (Markdown prompt / JSON package)
 - Distilled handoff context instead of the raw transcript: objectives, decisions, pending work, preferences, and code/files
 - Markdown output is a ready-to-paste prompt for a different LLM; JSON output is a structured, versioned package (`_meta.bridgeVersion`) for archival or programmatic use
-- Works fully offline by default (rule-based extraction); optionally refined via your own API key for Anthropic, OpenAI, or Google Gemini
+- Works fully offline by default (rule-based extraction); optionally refined via your own API key for Anthropic, OpenAI, Google Gemini, or a fully local model via Ollama
 
 ---
 ### Troubleshooting
@@ -122,7 +122,7 @@ See [docs/INSTALL.md](docs/INSTALL.md) for installation instructions (Chrome Web
 ### Privacy & Security
 
 - **Local Processing**: All data processing happens in your browser
-- **No External Servers**: The extension doesn't send data anywhere, except the AI Conversation Bridge's optional AI-enhanced mode, which sends conversation context to your chosen provider's API (Anthropic, OpenAI, or Google Gemini) using your own API key — only when you explicitly enable it
+- **No External Servers**: The extension doesn't send data anywhere, except the AI Conversation Bridge's optional AI-enhanced mode, which sends conversation context to your chosen provider's API (Anthropic, OpenAI, Google Gemini) using your own API key — or, with the Local (Ollama) option, to a model running entirely on your own machine — only when you explicitly enable it
 - **Your Authentication**: Uses your existing Claude.ai session
 - **Open Source**: You can review all code before installation
 
