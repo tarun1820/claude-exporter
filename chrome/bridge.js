@@ -14,11 +14,13 @@ const SECTION_TITLES = {
 };
 
 // Provider-specific storage key + display info for the AI-enhanced pass —
-// mirrors the same mapping used in options.js.
+// mirrors the same mapping used in options.js. 'local' has no fixed host —
+// it's the user's own configured Ollama address, filled in at runtime.
 const PROVIDER_INFO = {
   anthropic: { keyField: 'bridgeApiKeyAnthropic', label: 'Anthropic', host: 'api.anthropic.com' },
   openai: { keyField: 'bridgeApiKeyOpenAI', label: 'OpenAI', host: 'api.openai.com' },
   gemini: { keyField: 'bridgeApiKeyGemini', label: 'Google Gemini', host: 'generativelanguage.googleapis.com' },
+  local: { keyField: 'bridgeApiKeyLocal', label: 'Local (Ollama)', host: null },
 };
 
 let bridgeContext = null;
@@ -122,22 +124,42 @@ async function runExtraction(mode) {
   showStatus('Context extracted. Review and edit below before exporting.', 'success');
 }
 
+const BRIDGE_STORAGE_KEYS = [
+  'bridgeProvider',
+  'bridgeApiKeyAnthropic', 'bridgeApiKeyOpenAI', 'bridgeApiKeyGemini',
+  'bridgeLocalBaseUrl', 'bridgeLocalModel', 'bridgeApiKeyLocal',
+];
+
+// "Configured" means different things per provider: the 3 cloud providers
+// need their key present; local only needs a base URL + model — its key is
+// optional (most local Ollama installs have none).
+function isProviderConfigured(provider, settings) {
+  if (provider === 'local') {
+    return !!(settings.bridgeLocalBaseUrl && settings.bridgeLocalModel);
+  }
+  return !!settings[PROVIDER_INFO[provider].keyField];
+}
+
 async function checkApiKey() {
   return new Promise((resolve) => {
-    chrome.storage.local.get(['bridgeProvider', 'bridgeApiKeyAnthropic', 'bridgeApiKeyOpenAI', 'bridgeApiKeyGemini'], (result) => {
+    chrome.storage.local.get(BRIDGE_STORAGE_KEYS, (result) => {
       const provider = result.bridgeProvider || 'anthropic';
       const info = PROVIDER_INFO[provider] || PROVIDER_INFO.anthropic;
-      apiKeyConfigured = !!result[info.keyField];
+      apiKeyConfigured = isProviderConfigured(provider, result);
       const wrap = document.getElementById('aiToggleWrap');
       const checkbox = document.getElementById('aiEnhanced');
       if (!apiKeyConfigured) {
         wrap.classList.add('disabled');
         checkbox.disabled = true;
-        wrap.title = `Set a ${info.label} API key in Options to enable AI-enhanced extraction.`;
+        wrap.title = provider === 'local'
+          ? 'Set an Ollama server URL and model in Options to enable AI-enhanced extraction.'
+          : `Set a ${info.label} API key in Options to enable AI-enhanced extraction.`;
       } else {
         wrap.classList.remove('disabled');
         checkbox.disabled = false;
-        wrap.title = `Refine the extraction using your ${info.label} API key.`;
+        wrap.title = provider === 'local'
+          ? 'Refine the extraction using your local Ollama model.'
+          : `Refine the extraction using your ${info.label} API key.`;
       }
       resolve();
     });
@@ -146,18 +168,21 @@ async function checkApiKey() {
 
 async function runAiRefine() {
   if (!apiKeyConfigured) return;
-  const { provider, apiKey } = await new Promise((resolve) => {
-    chrome.storage.local.get(['bridgeProvider', 'bridgeApiKeyAnthropic', 'bridgeApiKeyOpenAI', 'bridgeApiKeyGemini'], (r) => {
-      const p = r.bridgeProvider || 'anthropic';
-      resolve({ provider: p, apiKey: r[PROVIDER_INFO[p].keyField] });
-    });
+  const settings = await new Promise((resolve) => {
+    chrome.storage.local.get(BRIDGE_STORAGE_KEYS, resolve);
   });
+  const provider = settings.bridgeProvider || 'anthropic';
+  const apiKey = provider === 'local' ? settings.bridgeApiKeyLocal : settings[PROVIDER_INFO[provider].keyField];
+  const model = provider === 'local' ? settings.bridgeLocalModel : undefined;
+  const baseUrl = provider === 'local' ? settings.bridgeLocalBaseUrl : undefined;
+
   const mode = document.getElementById('mode').value;
   syncEditsFromUI();
   const info = PROVIDER_INFO[provider] || PROVIDER_INFO.anthropic;
-  showStatus(`Refining with AI (this calls ${info.host} with your key)…`, 'info');
+  const host = provider === 'local' ? baseUrl : info.host;
+  showStatus(provider === 'local' ? `Refining with AI (this calls your local model at ${host})…` : `Refining with AI (this calls ${host} with your key)…`, 'info');
   try {
-    bridgeContext = await refineBridgeContextWithAI(bridgeContext, rawBranchText, { provider, apiKey }, mode);
+    bridgeContext = await refineBridgeContextWithAI(bridgeContext, rawBranchText, { provider, apiKey, model, baseUrl }, mode);
     renderSections();
     showStatus('AI-refined context ready. Review and edit below before exporting.', 'success');
   } catch (error) {

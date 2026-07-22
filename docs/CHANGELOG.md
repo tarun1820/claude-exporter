@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.15.0]
+
+- **Local LLM support for the AI Conversation Bridge** — added "Local (Ollama)" as a 4th provider alongside Anthropic/OpenAI/Gemini. Point it at any model running on your own machine via Ollama's OpenAI-compatible API; no cloud key, no per-request cost, nothing leaves your machine. API key is optional (only needed if your local server requires one).
+- **Options page now shows only the selected provider's fields** instead of all four at once — cleaner as more providers get added.
+- Added `http://localhost/*`/`http://127.0.0.1/*` host permissions for reaching a local Ollama server.
+- `docs/INSTALL.md` documents Ollama setup, including the `OLLAMA_ORIGINS=*` requirement needed for the extension to reach it (Ollama doesn't allow extension origins by default).
+
 ## [1.14.0]
 
 - **New extension icon** — replaced `icon16/32/48/128.png` with new artwork; added `icon32.png` (previously missing) and wired it into `manifest.json`'s `action.default_icon`/`icons` blocks.

@@ -694,6 +694,7 @@ function backupExtensionData(onComplete) {
       delete localCopy.bridgeApiKeyAnthropic;
       delete localCopy.bridgeApiKeyOpenAI;
       delete localCopy.bridgeApiKeyGemini;
+      delete localCopy.bridgeApiKeyLocal;
       const backup = {
         _meta: {
           app: 'claude-exporter',
@@ -1178,12 +1179,40 @@ const CE_PROVIDER_DEFAULTS = {
   anthropic: { model: 'claude-haiku-4-5-20251001' },
   openai: { model: 'gpt-4o-mini' },
   gemini: { model: 'gemini-2.0-flash' },
+  // No safe universal default — local model names are whatever the user has
+  // pulled into their own Ollama install (llama3.1, qwen2.5, mistral, ...).
+  // This is a documentation placeholder only, never silently substituted.
+  local: { model: 'llama3.1' },
 };
 
 // Build the fetch(url, options) pair for one provider's chat/generation
-// endpoint. Each provider has its own auth scheme (header vs query param)
-// and request shape, but all three take the same systemPrompt/userPrompt.
-function ceBuildProviderRequest(provider, apiKey, model, systemPrompt, userPrompt) {
+// endpoint. Each provider has its own auth scheme (header vs query param vs
+// none) and request shape, but all take the same systemPrompt/userPrompt.
+// baseUrl is only meaningful for 'local' (a user-configured Ollama address).
+function ceBuildProviderRequest(provider, apiKey, model, systemPrompt, userPrompt, baseUrl) {
+  if (provider === 'local') {
+    // Ollama's OpenAI-compatible endpoint mirrors the openai request/response
+    // shape below. Auth is optional — only attach the header if a key was
+    // actually configured (most local installs have none).
+    return {
+      url: `${baseUrl.replace(/\/+$/, '')}/v1/chat/completions`,
+      options: {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(apiKey ? { 'Authorization': `Bearer ${apiKey}` } : {}),
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt },
+          ],
+        }),
+      },
+    };
+  }
+
   if (provider === 'openai') {
     return {
       url: 'https://api.openai.com/v1/chat/completions',
@@ -1240,7 +1269,8 @@ function ceBuildProviderRequest(provider, apiKey, model, systemPrompt, userPromp
 
 // Pull the generated text out of each provider's differently-shaped response.
 function ceExtractProviderText(provider, result) {
-  if (provider === 'openai') {
+  if (provider === 'openai' || provider === 'local') {
+    // Ollama's OpenAI-compatible endpoint mirrors this response shape.
     return result.choices && result.choices[0] && result.choices[0].message && result.choices[0].message.content;
   }
   if (provider === 'gemini') {
@@ -1257,7 +1287,7 @@ function ceExtractProviderText(provider, result) {
 // asks it to return a refined JSON object in the same shape. Must be called
 // from an extension page context (not a claude.ai content script — the
 // page's CSP would block the cross-origin call).
-async function refineBridgeContextWithAI(bridgeContext, rawBranchText, { provider = 'anthropic', apiKey, model } = {}, mode = 'coding') {
+async function refineBridgeContextWithAI(bridgeContext, rawBranchText, { provider = 'anthropic', apiKey, model, baseUrl } = {}, mode = 'coding') {
   const resolvedModel = model || (CE_PROVIDER_DEFAULTS[provider] || CE_PROVIDER_DEFAULTS.anthropic).model;
 
   const MAX_BRANCH_CHARS = 12000;
@@ -1285,7 +1315,7 @@ async function refineBridgeContextWithAI(bridgeContext, rawBranchText, { provide
     preferences: bridgeContext.preferences,
   }, null, 2)}\n\nHere is the conversation transcript to refine it against:\n${condensed}\n\nReturn the refined JSON object only.`;
 
-  const { url, options } = ceBuildProviderRequest(provider, apiKey, resolvedModel, systemPrompt, userPrompt);
+  const { url, options } = ceBuildProviderRequest(provider, apiKey, resolvedModel, systemPrompt, userPrompt, baseUrl);
   const response = await fetch(url, options);
 
   if (!response.ok) {

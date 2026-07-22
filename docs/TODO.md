@@ -157,6 +157,13 @@
 
 ## Completed ✅
 
+- **Local LLM (Ollama) support + conditional provider fields** (v1.15.0)
+  - Added "Local (Ollama)" as a 4th AI Conversation Bridge provider — `refineBridgeContextWithAI`/`ceBuildProviderRequest`/`ceExtractProviderText` in `chrome/utils.js` gained a `local` branch that calls `{baseUrl}/v1/chat/completions` (Ollama's OpenAI-compatible endpoint), with the API key optional (most local installs have none)
+  - Options page now shows only the selected provider's fields (`updateProviderFieldsVisibility()` in `options.js`) instead of all four providers' fields at once — applies to all 4 providers, not just local
+  - New storage keys: `bridgeLocalBaseUrl`, `bridgeLocalModel`, `bridgeApiKeyLocal` (the latter excluded from backups same as the other 3 key fields)
+  - Added `http://localhost/*` / `http://127.0.0.1/*` to `host_permissions` — Chrome match patterns are port-agnostic, so this covers Ollama regardless of which port it's bound to (verify empirically on first real install; fall back to a specific `:11434` pattern or `optional_host_permissions` + `chrome.permissions.request()` if a port turns out to matter)
+  - `docs/INSTALL.md` documents Ollama setup, including the easy-to-miss `OLLAMA_ORIGINS=*` requirement (Ollama doesn't allow `chrome-extension://` origins by default)
+
 - **New icon + fancier visual redesign + BYOK documentation** (v1.14.0)
   - Replaced icon artwork (16/32/48/128px), added the previously-missing `icon32.png` to the manifest
   - Refreshed visual language across all 4 pages: gradient accent (`--gradient-primary`), rounder corner scale (`--radius-sm/md/lg`), teal secondary accent, gradient-clipped titles, updated font stack — also brought `content.css`'s floating button in line, closing the follow-up from the v1.12.1 unification pass

@@ -76,25 +76,37 @@ After installing the extension:
 
 ### Optional: AI Conversation Bridge API keys (BYOK)
 
-The Bridge's rule-based extraction works with no setup at all. To additionally enable **AI-enhanced extraction** — which refines that extraction with a real model call — bring your own API key for whichever provider you already use:
+The Bridge's rule-based extraction works with no setup at all. To additionally enable **AI-enhanced extraction** — which refines that extraction with a real model call — either bring your own API key for a cloud provider, or point at a model running entirely on your own machine:
 
-1. Get an API key from your provider of choice:
+1. Pick a provider:
    | Provider | Get a key at | Key format |
    |---|---|---|
    | **Anthropic (Claude)** | [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys) | starts with `sk-ant-` |
    | **OpenAI** | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) | starts with `sk-` |
    | **Google Gemini** | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) | starts with `AIza` |
+   | **Local (Ollama)** | no key needed — see setup below | n/a (optional key) |
 2. Open the extension's options page (right-click the extension icon → **Options**, or click the gear icon on the Browse page)
-3. Under **AI Conversation Bridge**:
-   - Set **AI Provider** to whichever one you got a key for
-   - Paste the key into the matching field (Anthropic / OpenAI / Google Gemini — only the one matching your selected provider needs to be filled in)
+3. Under **AI Conversation Bridge**, set **AI Provider** to whichever one you're using — only that provider's field(s) appear, the other three stay hidden:
+   - **Anthropic / OpenAI / Google Gemini**: paste the matching key
+   - **Local (Ollama)**: fill in the Ollama server URL (default `http://localhost:11434`), the model name (e.g. `llama3.1` — whatever you've pulled), and optionally a key only if your server sits behind its own auth
    - Optionally set a **Default transfer mode** (Coding / Research / Writing / Brainstorming)
 4. Click **Save Bridge Settings**
-5. On the Bridge page (opened via "Bridge to Another AI" or the Browse page's **Bridge**/**Bridge Filtered** actions), toggle **AI-enhanced extraction** on — it's greyed out until a key is configured for the selected provider
+5. On the Bridge page (opened via "Bridge to Another AI" or the Browse page's **Bridge**/**Bridge Filtered** actions), toggle **AI-enhanced extraction** on — it's greyed out until the selected provider is fully configured
 
-**How it works**: only the currently-selected provider's key is ever read, and it's sent only to that provider's own API (`api.anthropic.com`, `api.openai.com`, or `generativelanguage.googleapis.com`) — never anywhere else, and never automatically. You can save keys for more than one provider and switch the **AI Provider** dropdown any time; each key is remembered independently. All keys are stored only in this browser (never synced) and are excluded from backup and diagnostics exports.
+#### Setting up Local (Ollama)
 
-**Cost note**: this is bring-your-own-key — usage is billed by your provider's own account/plan, not by this extension. Each AI-enhanced Bridge refinement is one model call.
+1. Install [Ollama](https://ollama.com) and pull a model, e.g. `ollama pull llama3.1`
+2. **Important**: start Ollama with CORS allowed for the extension — by default Ollama only accepts requests from `localhost` web pages, not `chrome-extension://` origins. Set an environment variable before starting the server:
+   ```bash
+   OLLAMA_ORIGINS=* ollama serve
+   ```
+   (or list the extension's specific `chrome-extension://<id>` origin instead of `*` if you'd rather not open it up broadly)
+3. In the extension's Options, set **AI Provider** to **Local (Ollama)**, confirm the server URL matches where Ollama is listening, and enter the model name exactly as it appears in `ollama list`
+4. Everything runs on your machine — no data leaves it, and there's no per-request cost
+
+**How it works**: only the currently-selected provider's fields are ever read, and requests go only to that provider's own API (`api.anthropic.com`, `api.openai.com`, `generativelanguage.googleapis.com`, or your own local Ollama address) — never anywhere else, and never automatically. You can save settings for more than one provider and switch the **AI Provider** dropdown any time; each is remembered independently. All keys are stored only in this browser (never synced) and are excluded from backup and diagnostics exports.
+
+**Cost note**: the three cloud providers are bring-your-own-key — usage is billed by your own provider account/plan, not by this extension. Local (Ollama) has no per-request cost since it runs on your own hardware.
 
 ---
 
@@ -131,8 +143,9 @@ If you see this error when trying to export the current conversation:
 - Try removing and re-adding the extension from `chrome://extensions/`
 
 #### AI-enhanced Bridge extraction fails
-- Confirm the correct **AI Provider** is selected in Options and that provider's key is saved (Save Bridge Settings, not just typed in)
-- Check the browser console on the Bridge tab for the specific provider API error (invalid key, rate limit, wrong key for the selected provider, etc.) — it'll name the host (`api.anthropic.com`, `api.openai.com`, or `generativelanguage.googleapis.com`)
+- Confirm the correct **AI Provider** is selected in Options and its fields are saved (Save Bridge Settings, not just typed in)
+- Check the browser console on the Bridge tab for the specific provider API error (invalid key, rate limit, wrong key for the selected provider, etc.) — it'll name the host (`api.anthropic.com`, `api.openai.com`, `generativelanguage.googleapis.com`, or your local Ollama address)
+- **Local (Ollama) specifically**: a "Failed to fetch" or CORS-looking error almost always means Ollama wasn't started with `OLLAMA_ORIGINS` set — restart it with `OLLAMA_ORIGINS=* ollama serve` (see the Local setup steps above). Also double-check the model name matches `ollama list` exactly.
 - The rule-based (non-AI) extraction still works even if the AI-enhanced pass fails
 
 ---

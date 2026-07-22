@@ -67,39 +67,68 @@ document.getElementById('testBtn').addEventListener('click', async () => {
   }
 });
 
-// AI Conversation Bridge settings — one API key per provider, stored in
-// chrome.storage.local only (never .sync), so they stay on this device and
-// are excluded from backup/diagnostics exports (see backupExtensionData in
-// utils.js). Only the currently-selected provider's key is ever read when
-// the Bridge page runs AI-enhanced extraction.
+// AI Conversation Bridge settings — one API key per provider (plus a base
+// URL/model for the local option), stored in chrome.storage.local only
+// (never .sync), so they stay on this device and are excluded from
+// backup/diagnostics exports (see backupExtensionData in utils.js). Only the
+// currently-selected provider's fields are ever read when the Bridge page
+// runs AI-enhanced extraction.
 const BRIDGE_KEY_FIELDS = {
   anthropic: 'bridgeApiKeyAnthropic',
   openai: 'bridgeApiKeyOpenAI',
   gemini: 'bridgeApiKeyGemini',
+  local: 'bridgeApiKeyLocal',
 };
+
+// Only the field group matching the selected provider is shown — the other
+// three stay hidden instead of cluttering the page all at once.
+function updateProviderFieldsVisibility() {
+  const selected = document.getElementById('bridgeProvider').value;
+  document.querySelectorAll('.provider-fields').forEach((group) => {
+    group.classList.toggle('hidden', group.dataset.provider !== selected);
+  });
+}
 
 function loadBridgeSettings() {
   chrome.storage.local.get(
-    ['bridgeProvider', 'bridgeApiKeyAnthropic', 'bridgeApiKeyOpenAI', 'bridgeApiKeyGemini', 'bridgeDefaultMode'],
+    [
+      'bridgeProvider',
+      'bridgeApiKeyAnthropic', 'bridgeApiKeyOpenAI', 'bridgeApiKeyGemini',
+      'bridgeLocalBaseUrl', 'bridgeLocalModel', 'bridgeApiKeyLocal',
+      'bridgeDefaultMode',
+    ],
     (result) => {
       document.getElementById('bridgeProvider').value = result.bridgeProvider || 'anthropic';
       if (result.bridgeApiKeyAnthropic) document.getElementById('bridgeApiKeyAnthropic').value = result.bridgeApiKeyAnthropic;
       if (result.bridgeApiKeyOpenAI) document.getElementById('bridgeApiKeyOpenAI').value = result.bridgeApiKeyOpenAI;
       if (result.bridgeApiKeyGemini) document.getElementById('bridgeApiKeyGemini').value = result.bridgeApiKeyGemini;
+      if (result.bridgeLocalBaseUrl) document.getElementById('bridgeLocalBaseUrl').value = result.bridgeLocalBaseUrl;
+      if (result.bridgeLocalModel) document.getElementById('bridgeLocalModel').value = result.bridgeLocalModel;
+      if (result.bridgeApiKeyLocal) document.getElementById('bridgeApiKeyLocal').value = result.bridgeApiKeyLocal;
       document.getElementById('bridgeDefaultMode').value = result.bridgeDefaultMode || 'coding';
+      updateProviderFieldsVisibility();
     }
   );
 }
 loadBridgeSettings();
+
+document.getElementById('bridgeProvider').addEventListener('change', updateProviderFieldsVisibility);
 
 document.getElementById('saveBridgeBtn').addEventListener('click', () => {
   const bridgeProvider = document.getElementById('bridgeProvider').value;
   const bridgeApiKeyAnthropic = document.getElementById('bridgeApiKeyAnthropic').value.trim();
   const bridgeApiKeyOpenAI = document.getElementById('bridgeApiKeyOpenAI').value.trim();
   const bridgeApiKeyGemini = document.getElementById('bridgeApiKeyGemini').value.trim();
+  const bridgeLocalBaseUrl = document.getElementById('bridgeLocalBaseUrl').value.trim();
+  const bridgeLocalModel = document.getElementById('bridgeLocalModel').value.trim();
+  const bridgeApiKeyLocal = document.getElementById('bridgeApiKeyLocal').value.trim();
   const bridgeDefaultMode = document.getElementById('bridgeDefaultMode').value;
   chrome.storage.local.set(
-    { bridgeProvider, bridgeApiKeyAnthropic, bridgeApiKeyOpenAI, bridgeApiKeyGemini, bridgeDefaultMode },
+    {
+      bridgeProvider, bridgeApiKeyAnthropic, bridgeApiKeyOpenAI, bridgeApiKeyGemini,
+      bridgeLocalBaseUrl, bridgeLocalModel, bridgeApiKeyLocal,
+      bridgeDefaultMode,
+    },
     () => {
       showStatus('bridgeStatus', 'Bridge settings saved.', 'success');
     }
