@@ -157,6 +157,12 @@
 
 ## Completed ✅
 
+- **Fixed: Bridge Regenerate/Transfer mode ignored AI-enhanced extraction** (v1.15.2)
+  - Root cause: the mode-change and Regenerate handlers in `chrome/bridge.js` always ran plain rule-based extraction and never checked whether AI-enhanced extraction was toggled on, so switching mode after an AI refine silently discarded it
+  - New `refreshContext(mode)` is the single entry point for both the mode dropdown and Regenerate button — re-extracts for the mode, then re-runs `runAiRefine()` on top if the AI-enhanced checkbox is checked; unchecking the box now reverts the displayed context back to the plain extraction
+  - New `setControlsBusy()` disables mode/checkbox/Regenerate during any extraction or AI-refine fetch; Regenerate shows a "Regenerating…" label plus a small CSS spinner so it's clear a request is in flight, and prevents overlapping clicks
+  - Bumped the default Gemini model (`CE_PROVIDER_DEFAULTS.gemini`) to `gemini-3.1-flash-lite`
+
 - **Fixed: uploaded images not included in export ZIPs** (v1.15.1)
   - Root cause: an image the user uploaded to Claude (e.g. "analyze this image") lives under `message.files[]` (`file_kind: "image"`) — a completely different field from `message.attachments[]` (pasted text/document content), which was already handled. `message.files` was never referenced anywhere, so uploaded images were silently dropped from every export.
   - New `extractImageFiles(data)` in `chrome/utils.js` collects image metadata (filename, dedup, `file_uuid`, `preview_url`) mirroring the existing `extractArtifactFiles` pattern

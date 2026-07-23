@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.15.2]
+
+- **Fixed: Regenerate/Transfer mode didn't respect AI-enhanced extraction.** After enabling AI-enhanced extraction, switching Transfer mode or clicking Regenerate silently fell back to the plain rule-based extraction instead of re-applying the AI refinement — the two handlers never checked the AI-enhanced checkbox at all. `bridge.js` now has a single `refreshContext()` used by both the mode dropdown and Regenerate: it re-extracts for the selected mode, then re-runs AI refinement on top if the checkbox is checked. Unchecking AI-enhanced now also reverts the on-screen context back to the plain extraction, instead of leaving stale AI-refined text under an unchecked box.
+- Regenerate (and the mode/AI-enhanced controls) now disable during the fetch and Regenerate shows a "Regenerating…" label with a small spinner, preventing overlapping clicks while a request is in flight.
+- Updated the default Gemini model for AI-enhanced extraction to `gemini-3.1-flash-lite`.
+
 ## [1.15.1]
 
 - **Fixed: uploaded images (e.g. "analyze this image") were never included in exported ZIPs.** Images live under a `message.files[]` array — a completely different field from `message.attachments[]` (pasted text/document content), which was already handled — and were invisible to every export path. Exports now fetch and include the actual image bytes:

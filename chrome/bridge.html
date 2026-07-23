@@ -122,6 +122,19 @@
   }
   button:hover { filter: brightness(1.08); box-shadow: 0 4px 12px var(--shadow-md); }
   button:disabled { background: var(--disabled-bg); color: var(--disabled-text); cursor: not-allowed; box-shadow: none; filter: none; }
+  #regenerate:disabled::after {
+    content: '';
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    margin-left: 8px;
+    border: 2px solid var(--disabled-text);
+    border-top-color: transparent;
+    border-radius: 50%;
+    vertical-align: middle;
+    animation: ce-spin 0.7s linear infinite;
+  }
+  @keyframes ce-spin { to { transform: rotate(360deg); } }
   button.secondary { background: var(--secondary-color); }
   button.secondary:hover { background: var(--secondary-hover); filter: none; }
   .section {

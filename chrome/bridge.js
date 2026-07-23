@@ -124,6 +124,39 @@ async function runExtraction(mode) {
   showStatus('Context extracted. Review and edit below before exporting.', 'success');
 }
 
+// Disables the mode/AI-enhanced/Regenerate controls and shows a buffering
+// label on Regenerate while an extraction or AI-refine request is in flight,
+// so overlapping clicks (e.g. switching mode mid-fetch) can't race each other.
+function setControlsBusy(busy) {
+  const regenerateBtn = document.getElementById('regenerate');
+  const modeSelect = document.getElementById('mode');
+  const aiCheckbox = document.getElementById('aiEnhanced');
+  regenerateBtn.disabled = busy;
+  regenerateBtn.textContent = busy ? 'Regenerating…' : 'Regenerate';
+  modeSelect.disabled = busy;
+  aiCheckbox.disabled = busy || !apiKeyConfigured;
+}
+
+// Single entry point for "give me the context for this mode" — used by both
+// the mode dropdown and the Regenerate button, so they always agree on
+// whether AI-enhanced refinement should be (re)applied on top of the
+// Tier-1 extraction, instead of silently dropping back to rule-based output.
+async function refreshContext(mode) {
+  if (!window.__ceRawConversation) {
+    updatePreview();
+    return;
+  }
+  setControlsBusy(true);
+  try {
+    await runExtraction(mode);
+    if (document.getElementById('aiEnhanced').checked && apiKeyConfigured) {
+      await runAiRefine();
+    }
+  } finally {
+    setControlsBusy(false);
+  }
+}
+
 const BRIDGE_STORAGE_KEYS = [
   'bridgeProvider',
   'bridgeApiKeyAnthropic', 'bridgeApiKeyOpenAI', 'bridgeApiKeyGemini',
@@ -241,16 +274,27 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   document.getElementById('mode').addEventListener('change', async (e) => {
-    if (window.__ceRawConversation) await runExtraction(e.target.value);
-    else updatePreview();
+    await refreshContext(e.target.value);
   });
 
   document.getElementById('regenerate').addEventListener('click', async () => {
-    if (window.__ceRawConversation) await runExtraction(document.getElementById('mode').value);
+    await refreshContext(document.getElementById('mode').value);
   });
 
-  document.getElementById('aiEnhanced').addEventListener('change', (e) => {
-    if (e.target.checked) runAiRefine();
+  document.getElementById('aiEnhanced').addEventListener('change', async (e) => {
+    setControlsBusy(true);
+    try {
+      if (e.target.checked) {
+        await runAiRefine();
+      } else if (window.__ceRawConversation) {
+        // Revert to the plain rule-based extraction for the current mode —
+        // otherwise the checkbox would read "off" while the AI-refined
+        // content stayed on screen.
+        await runExtraction(document.getElementById('mode').value);
+      }
+    } finally {
+      setControlsBusy(false);
+    }
   });
 
   // Re-render the preview live as the user edits any section.

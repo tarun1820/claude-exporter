@@ -1241,7 +1241,7 @@ function extractBridgeContext(data, mode = 'coding') {
 const CE_PROVIDER_DEFAULTS = {
   anthropic: { model: 'claude-haiku-4-5-20251001' },
   openai: { model: 'gpt-4o-mini' },
-  gemini: { model: 'gemini-2.0-flash' },
+  gemini: { model: 'gemini-3.1-flash-lite' },
   // No safe universal default — local model names are whatever the user has
   // pulled into their own Ollama install (llama3.1, qwen2.5, mistral, ...).
   // This is a documentation placeholder only, never silently substituted.
