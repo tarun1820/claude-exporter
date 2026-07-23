@@ -120,6 +120,17 @@ function convertToMarkdown(data, includeMetadata, conversationId = null, include
       }
     }
 
+    // Handle image uploads (message.files, distinct from message.attachments) —
+    // the binary itself is exported alongside as a real file (see images/),
+    // this is just a marker of where it sits in the conversation.
+    if (message.files && message.files.length > 0) {
+      for (const file of message.files) {
+        if (file && file.file_kind === 'image' && file.file_name) {
+          markdown += `### Image: ${file.file_name}\n_(see images/${file.file_name} in this export)_\n\n`;
+        }
+      }
+    }
+
     // Render all artifacts found in the message
     for (const artifact of messageArtifacts) {
       markdown += `#### 📦 Artifact: ${artifact.title}\n`;
@@ -213,6 +224,16 @@ function convertToText(data, includeMetadata, includeArtifacts = true, includeTh
           text += `\n[Pasted content${size}]\n`;
           text += `${attachment.extracted_content}\n`;
           text += `[End Pasted content]\n`;
+        }
+      }
+    }
+
+    // Add image upload markers (message.files, distinct from attachments) —
+    // the binary itself is exported alongside as a real file (see images/).
+    if (message.files && message.files.length > 0) {
+      for (const file of message.files) {
+        if (file && file.file_kind === 'image' && file.file_name) {
+          text += `\n[Image: ${file.file_name} (see images/${file.file_name})]\n`;
         }
       }
     }
@@ -610,6 +631,48 @@ function extractArtifactFiles(data, artifactFormat = 'original') {
   }
 
   return artifactFiles;
+}
+
+// Extract image-upload metadata from a conversation's messages. Images live
+// under message.files[] (file_kind: 'image') — a completely different field
+// than message.attachments[] (pasted text / extracted document content).
+// This is pure metadata only; the actual bytes require an authenticated
+// fetch against previewUrl, which happens in content.js (this file has no
+// fetch-with-session context of its own).
+function extractImageFiles(data) {
+  const imageFiles = [];
+  const usedFilenames = new Set();
+
+  const branchMessages = getCurrentBranch(data);
+
+  for (const message of branchMessages) {
+    if (!Array.isArray(message.files)) continue;
+
+    for (const file of message.files) {
+      if (!file || file.file_kind !== 'image') continue;
+
+      let filename = (file.file_name || `${file.file_uuid || file.uuid}.png`).replace(/[<>:"/\\|?*]/g, '_');
+
+      // Handle duplicate filenames
+      let counter = 1;
+      const extensionMatch = filename.match(/(\.[^.]+)$/);
+      const extension = extensionMatch ? extensionMatch[1] : '';
+      const nameWithoutExt = extension ? filename.slice(0, -extension.length) : filename;
+      while (usedFilenames.has(filename)) {
+        filename = `${nameWithoutExt}_${counter}${extension}`;
+        counter++;
+      }
+      usedFilenames.add(filename);
+
+      imageFiles.push({
+        filename,
+        fileUuid: file.file_uuid || file.uuid,
+        previewUrl: file.preview_url || file.thumbnail_url,
+      });
+    }
+  }
+
+  return imageFiles;
 }
 // ----- Model utilities -----
 
@@ -1178,7 +1241,7 @@ function extractBridgeContext(data, mode = 'coding') {
 const CE_PROVIDER_DEFAULTS = {
   anthropic: { model: 'claude-haiku-4-5-20251001' },
   openai: { model: 'gpt-4o-mini' },
-  gemini: { model: 'gemini-2.0-flash' },
+  gemini: { model: 'gemini-3.1-flash-lite' },
   // No safe universal default — local model names are whatever the user has
   // pulled into their own Ollama install (llama3.1, qwen2.5, mistral, ...).
   // This is a documentation placeholder only, never silently substituted.
@@ -1439,6 +1502,7 @@ if (typeof module !== 'undefined' && module.exports) {
     isProgrammingLanguage,
     convertArtifactFormat,
     extractArtifactFiles,
+    extractImageFiles,
     DEFAULT_MODEL_TIMELINE,
     inferModel,
     formatModelName,

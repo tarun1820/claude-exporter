@@ -100,6 +100,23 @@ function getLocalDateTimeString() {
     return await response.json();
   }
 
+  // Fetch an uploaded image's binary content. previewUrl is a relative path
+  // (e.g. /api/{orgId}/files/{fileUuid}/preview) returned by the conversation
+  // API — resolve it against claude.ai and read it as a Blob (JSZip accepts
+  // Blobs directly) rather than JSON, since this is the one binary fetch in
+  // an otherwise all-JSON codebase.
+  async function fetchImageBlob(previewUrl) {
+    const response = await fetch(`https://claude.ai${previewUrl}`, {
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch image: ${response.status}`);
+    }
+
+    return await response.blob();
+  }
+
   // Fetch every chat_conversations page for one org, following pagination via
   // limit/offset. Some accounts only ever see the API's default page (~14
   // items) because the endpoint was previously called with no params at all.
@@ -262,7 +279,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     let resolvedOrgId = request.orgId;
     fetchConversationAnyOrg(request.orgId, request.conversationId)
-      .then(({ data, orgId }) => {
+      .then(async ({ data, orgId }) => {
         resolvedOrgId = orgId;
         console.log('Conversation data fetched successfully:', data);
 
@@ -273,14 +290,30 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
         // Infer model if null
         data.model = inferModel(data);
-        
+
+        // Uploaded images (message.files, distinct from artifacts/attachments)
+        // — always fetched when present, since a conversation file plus
+        // image(s) is multi-file and must be ZIPped per project convention,
+        // even if no artifact-extraction checkbox was checked.
+        const imageFiles = extractImageFiles(data);
+        const fetchedImages = imageFiles.length > 0
+          ? (await Promise.all(imageFiles.map(async (img) => {
+              try {
+                return { ...img, blob: await fetchImageBlob(img.previewUrl) };
+              } catch (error) {
+                console.warn(`Failed to fetch image ${img.filename}:`, error);
+                return null;
+              }
+            }))).filter(Boolean)
+          : [];
+
         // Check if we need to extract artifacts to separate files
-        if (request.extractArtifacts || request.flattenArtifacts) {
+        if (request.extractArtifacts || request.flattenArtifacts || fetchedImages.length > 0) {
           // Extract artifacts
           const artifactFiles = extractArtifactFiles(data, request.artifactFormat || 'original');
 
-          if (artifactFiles.length > 0) {
-            // Create a ZIP with artifacts (and optionally conversation)
+          if (artifactFiles.length > 0 || fetchedImages.length > 0) {
+            // Create a ZIP with artifacts/images (and optionally conversation)
             const zip = new JSZip();
 
             // Add conversation file only if includeChats is true
@@ -328,6 +361,24 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
               }
             }
 
+            // Add uploaded images — flat mode mirrors the flat artifact
+            // convention (top-level Images folder, conv-name prefix);
+            // everything else (nested, or no extraction flags at all) uses
+            // a plain images/ folder alongside artifacts/.
+            if (fetchedImages.length > 0) {
+              if (request.flattenArtifacts && !request.extractArtifacts) {
+                const imagesFolder = zip.folder('Images');
+                for (const img of fetchedImages) {
+                  imagesFolder.file(`${data.name || request.conversationId}_${img.filename}`, img.blob);
+                }
+              } else {
+                const imagesFolder = request.includeChats !== false ? zip.folder('images') : zip;
+                for (const img of fetchedImages) {
+                  imagesFolder.file(img.filename, img.blob);
+                }
+              }
+            }
+
             // Generate and download ZIP
             zip.generateAsync({ type: 'blob' }).then(blob => {
               const url = URL.createObjectURL(blob);
@@ -340,11 +391,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
               URL.revokeObjectURL(url);
             });
 
-            console.log(`Downloading ZIP with conversation and ${artifactFiles.length} artifact(s)`);
+            console.log(`Downloading ZIP with conversation, ${artifactFiles.length} artifact(s), and ${fetchedImages.length} image(s)`);
             recordExportTimestamp(request.conversationId);
             sendResponse({ success: true, resolvedOrgId });
           } else {
-            // No artifacts found, just export conversation normally
+            // No artifacts or images found, just export conversation normally
             let content, filename, type;
             switch (request.format) {
               case 'markdown':
@@ -362,7 +413,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 filename = `${data.name || request.conversationId}.json`;
                 type = 'application/json';
             }
-            console.log('No artifacts found. Downloading file:', filename);
+            console.log('No artifacts or images found. Downloading file:', filename);
             downloadFile(content, filename, type);
             recordExportTimestamp(request.conversationId);
             sendResponse({ success: true, resolvedOrgId });
@@ -440,9 +491,22 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
               // Extract artifacts first to check if this conversation should be included
               const artifactFiles = extractArtifactFiles(fullConv, request.artifactFormat || 'original');
 
-              // If chats are disabled and no artifacts, skip this conversation
-              if (request.includeChats === false && artifactFiles.length === 0) {
-                console.log(`  Skipping - no artifacts found (${processed}/${conversations.length} scanned, ${included} included)`);
+              // Fetch any uploaded images too (message.files, distinct from artifacts)
+              const imageFilesMeta = extractImageFiles(fullConv);
+              const fetchedImages = imageFilesMeta.length > 0
+                ? (await Promise.all(imageFilesMeta.map(async (img) => {
+                    try {
+                      return { ...img, blob: await fetchImageBlob(img.previewUrl) };
+                    } catch (error) {
+                      console.warn(`Failed to fetch image ${img.filename}:`, error);
+                      return null;
+                    }
+                  }))).filter(Boolean)
+                : [];
+
+              // If chats are disabled and no artifacts or images, skip this conversation
+              if (request.includeChats === false && artifactFiles.length === 0 && fetchedImages.length === 0) {
+                console.log(`  Skipping - no artifacts or images found (${processed}/${conversations.length} scanned, ${included} included)`);
                 // Add a small delay to avoid overwhelming the API
                 await new Promise(resolve => setTimeout(resolve, 500));
                 continue;
@@ -480,6 +544,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     artifactsFolder.file(artifactFilename, artifact.content);
                   }
                 }
+
+                // Add images to Images folder with conversation name prefix
+                if (fetchedImages.length > 0) {
+                  const imagesFolder = zip.folder('Images');
+                  for (const img of fetchedImages) {
+                    imagesFolder.file(`${folderName}_${img.filename}`, img.blob);
+                  }
+                }
               }
               // Nested export: create per-conversation folders with artifacts subfolder
               else if (request.extractArtifacts) {
@@ -496,6 +568,26 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                   for (const artifact of artifactFiles) {
                     artifactsFolder.file(artifact.filename, artifact.content);
                   }
+                }
+
+                // Add images in a nested images subfolder alongside artifacts
+                if (fetchedImages.length > 0) {
+                  const imagesFolder = request.includeChats !== false ? convFolder.folder('images') : convFolder;
+                  for (const img of fetchedImages) {
+                    imagesFolder.file(img.filename, img.blob);
+                  }
+                }
+              }
+              // Neither nested nor flat artifact extraction requested, but this
+              // conversation has images anyway — still include them, per-conversation.
+              else if (fetchedImages.length > 0) {
+                const convFolder = zip.folder(folderName);
+                if (request.includeChats !== false) {
+                  convFolder.file(conversationFilename, conversationContent);
+                }
+                const imagesFolder = request.includeChats !== false ? convFolder.folder('images') : convFolder;
+                for (const img of fetchedImages) {
+                  imagesFolder.file(img.filename, img.blob);
                 }
               }
 
@@ -569,6 +661,24 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
               }
 
               zip.file(filename, content);
+
+              // Fetch any uploaded images for this conversation too — placed
+              // in a top-level Images folder with the conversation name
+              // prefix, matching the flat artifact naming convention, since
+              // this bulk path has no per-conversation folders.
+              const imageFilesMeta = extractImageFiles(fullConv);
+              if (imageFilesMeta.length > 0) {
+                const imagesFolder = zip.folder('Images');
+                for (const img of imageFilesMeta) {
+                  try {
+                    const blob = await fetchImageBlob(img.previewUrl);
+                    imagesFolder.file(`${safeName}_${img.filename}`, blob);
+                  } catch (error) {
+                    console.warn(`Failed to fetch image ${img.filename} for ${conv.name || conv.uuid}:`, error);
+                  }
+                }
+              }
+
               count++;
 
               // Add a small delay to avoid overwhelming the API
