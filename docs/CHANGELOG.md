@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.15.1]
+
+- **Fixed: uploaded images (e.g. "analyze this image") were never included in exported ZIPs.** Images live under a `message.files[]` array — a completely different field from `message.attachments[]` (pasted text/document content), which was already handled — and were invisible to every export path. Exports now fetch and include the actual image bytes:
+  - Single-conversation export now forces a ZIP (per the existing "multi-file exports must always be ZIPped" rule) whenever a conversation has images, even if no artifact-extraction checkbox is checked.
+  - Images are placed in `images/` (nested mode) or a top-level `Images/` folder with the conversation name prefix (flat mode / bulk export without extraction), mirroring the existing artifact placement conventions.
+  - Markdown/Text exports now also mention `### Image: <filename>` / `[Image: <filename>]` at the right point in the conversation, pointing at where the file lives in the export.
+  - Scoped to the ZIP/Markdown/Text export paths — the AI Conversation Bridge doesn't include images yet (noted as a follow-up in `docs/TODO.md`).
+
 ## [1.15.0]
 
 - **Local LLM support for the AI Conversation Bridge** — added "Local (Ollama)" as a 4th provider alongside Anthropic/OpenAI/Gemini. Point it at any model running on your own machine via Ollama's OpenAI-compatible API; no cloud key, no per-request cost, nothing leaves your machine. API key is optional (only needed if your local server requires one).

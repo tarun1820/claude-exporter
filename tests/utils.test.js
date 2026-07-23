@@ -4,8 +4,10 @@ import utils from '../chrome/utils.js';
 const {
   getCurrentBranch,
   convertToMarkdown,
+  convertToText,
   extractArtifactsFromMessage,
   extractArtifactFiles,
+  extractImageFiles,
   getFileExtension,
   isProgrammingLanguage,
   inferModel,
@@ -649,5 +651,96 @@ describe('generateBridgeJSON', () => {
     expect(json._meta.mode).toBe('research');
     expect(json.objectives).toEqual(ctx.objectives);
     expect(json.codeSnippets).toEqual(ctx.codeSnippets);
+  });
+});
+
+// Regression coverage for the bug where uploaded images (message.files,
+// file_kind: 'image') were invisible to every export path — they live in a
+// completely different field than message.attachments (pasted text/document
+// content), which was already handled.
+function imageFixture() {
+  return {
+    name: 'Chat with an image',
+    model: 'claude-sonnet-4-5-20250929',
+    created_at: '2026-07-23T11:34:00Z',
+    updated_at: '2026-07-23T11:35:00Z',
+    current_leaf_message_uuid: 'm2',
+    chat_messages: [
+      {
+        uuid: 'm1',
+        sender: 'human',
+        content: [{ type: 'text', text: 'analyze this image' }],
+        attachments: [],
+        files: [
+          {
+            success: true,
+            file_kind: 'image',
+            file_uuid: '880360d2-3c2f-4260-9569-224c76de7df4',
+            file_name: '1784806487596_image.png',
+            preview_url: '/api/cd0c30e2-f7fc-49fb-b213-08412f5f2f79/files/880360d2-3c2f-4260-9569-224c76de7df4/preview',
+            thumbnail_url: '/api/cd0c30e2-f7fc-49fb-b213-08412f5f2f79/files/880360d2-3c2f-4260-9569-224c76de7df4/thumbnail',
+            uuid: '880360d2-3c2f-4260-9569-224c76de7df4',
+          },
+        ],
+        parent_message_uuid: '00000000-0000-0000-0000-000000000000',
+      },
+      {
+        uuid: 'm2',
+        sender: 'assistant',
+        content: [{ type: 'text', text: 'Here is my analysis.' }],
+        parent_message_uuid: 'm1',
+      },
+    ],
+  };
+}
+
+describe('extractImageFiles', () => {
+  it('extracts image metadata from message.files (distinct from attachments)', () => {
+    const images = extractImageFiles(imageFixture());
+    expect(images).toHaveLength(1);
+    expect(images[0].filename).toBe('1784806487596_image.png');
+    expect(images[0].fileUuid).toBe('880360d2-3c2f-4260-9569-224c76de7df4');
+    expect(images[0].previewUrl).toBe('/api/cd0c30e2-f7fc-49fb-b213-08412f5f2f79/files/880360d2-3c2f-4260-9569-224c76de7df4/preview');
+  });
+
+  it('ignores non-image files and messages with no files array', () => {
+    const data = imageFixture();
+    data.chat_messages[0].files.push({ file_kind: 'document', file_name: 'notes.txt', preview_url: '/x' });
+    const images = extractImageFiles(data);
+    expect(images).toHaveLength(1);
+    expect(images[0].filename).toBe('1784806487596_image.png');
+  });
+
+  it('dedupes duplicate filenames the same way extractArtifactFiles does', () => {
+    const data = imageFixture();
+    data.chat_messages[0].files.push({
+      file_kind: 'image',
+      file_uuid: 'second-uuid',
+      file_name: '1784806487596_image.png',
+      preview_url: '/api/org/files/second-uuid/preview',
+    });
+    const images = extractImageFiles(data);
+    expect(images).toHaveLength(2);
+    expect(images[0].filename).toBe('1784806487596_image.png');
+    expect(images[1].filename).toBe('1784806487596_image_1.png');
+  });
+
+  it('returns an empty array for a conversation with no images', () => {
+    const data = imageFixture();
+    data.chat_messages[0].files = [];
+    expect(extractImageFiles(data)).toEqual([]);
+  });
+});
+
+describe('convertToMarkdown / convertToText — image markers', () => {
+  it('mentions the image filename in markdown output', () => {
+    const md = convertToMarkdown(imageFixture(), false);
+    expect(md).toContain('### Image: 1784806487596_image.png');
+    expect(md).toContain('images/1784806487596_image.png');
+  });
+
+  it('mentions the image filename in plain text output', () => {
+    const text = convertToText(imageFixture(), false);
+    expect(text).toContain('[Image: 1784806487596_image.png');
   });
 });

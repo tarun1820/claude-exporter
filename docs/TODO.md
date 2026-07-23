@@ -157,6 +157,14 @@
 
 ## Completed ✅
 
+- **Fixed: uploaded images not included in export ZIPs** (v1.15.1)
+  - Root cause: an image the user uploaded to Claude (e.g. "analyze this image") lives under `message.files[]` (`file_kind: "image"`) — a completely different field from `message.attachments[]` (pasted text/document content), which was already handled. `message.files` was never referenced anywhere, so uploaded images were silently dropped from every export.
+  - New `extractImageFiles(data)` in `chrome/utils.js` collects image metadata (filename, dedup, `file_uuid`, `preview_url`) mirroring the existing `extractArtifactFiles` pattern
+  - New `fetchImageBlob(previewUrl)` in `chrome/content.js` — the first `.blob()` fetch in the codebase (everything else is `.json()`) — resolves the relative `preview_url` against `https://claude.ai` using the same authenticated session as every other API call
+  - Both `exportConversation` and `exportAllConversations` now fetch and include image bytes, forcing a ZIP whenever images are present (per the standing "multi-file exports must always be ZIPped" rule) even if no artifact-extraction checkbox is checked; images land in `images/` (nested) or a top-level `Images/` folder with the conversation name prefix (flat/bulk), mirroring artifact placement conventions
+  - Markdown/Text exports now mark `### Image: <filename>` / `[Image: <filename>]` where the image appears in the conversation
+  - Follow-up not included in this pass: the AI Conversation Bridge (`bridge.js`/`extractBridgeContext`) still doesn't account for uploaded images
+
 - **Local LLM (Ollama) support + conditional provider fields** (v1.15.0)
   - Added "Local (Ollama)" as a 4th AI Conversation Bridge provider — `refineBridgeContextWithAI`/`ceBuildProviderRequest`/`ceExtractProviderText` in `chrome/utils.js` gained a `local` branch that calls `{baseUrl}/v1/chat/completions` (Ollama's OpenAI-compatible endpoint), with the API key optional (most local installs have none)
   - Options page now shows only the selected provider's fields (`updateProviderFieldsVisibility()` in `options.js`) instead of all four providers' fields at once — applies to all 4 providers, not just local
